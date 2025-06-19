@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>SVG Bracket Viewer</title>
+    <style>
+        body {
+            background: #0d0d0d;
+            color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow-y: auto;
+            display: flex;
+        }
+        .container {
+            margin-top: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        svg {
+            background: #1a1a1a;
+            border-radius: 16px;
+            box-shadow: 0 0 30px rgba(0, 255, 128, 0.2);
+        }
+        text {
+            fill: #ccc;
+            font-size: 13px;
+            dominant-baseline: middle;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .line {
+            stroke: #444;
+            stroke-width: 2;
+        }
+        .winner {
+            fill: #22aa22;
+            font-weight: bold;
+            filter: drop-shadow(0 0 4px #22aa22);
+        }
+        .final-winner {
+            fill: #00ff88;
+            font-weight: bold;
+            filter: drop-shadow(0 0 4px #00ff88);
+        }
+        .box {
+            fill: #252525;
+            rx: 6;
+            ry: 6;
+            stroke: #333;
+            stroke-width: 1;
+            cursor: pointer;
+        }
+        select {
+            margin-bottom: 20px;
+            padding: 6px;
+            font-size: 14px;
+        }
+        .sidebar {
+            width: 200px;
+            padding: 20px;
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-right: 1px solid #222;
+        }
+        .sidebar input {
+            padding: 5px;
+            background: #222;
+            border: 1px solid #444;
+            color: #eee;
+        }
+        .pending {
+            fill: #ccc;
+        }
+        .default {
+            fill: #aaa;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <label for="playerCount">Players</label>
+    <select id="playerCount">
+        <option value="2">2 Players</option>
+        <option value="4" selected>4 Players</option>
+        <option value="8">8 Players</option>
+        <option value="16" >16 Players</option>
+        <option value="32">32 Players</option>
+    </select>
+    <div id="nameInputs"></div>
+</div>
+<div class="container">
+    <svg id="bracket" width="1600" height="1700"></svg>
+</div>
+<script>
+    let totalPlayers = 4;
+    const spacingY = 50;
+    const boxW = 110;
+    const boxH = 30;
+    const roundSpacingX = 180;
+
+    const svg = document.getElementById("bracket");
+    const select = document.getElementById("playerCount");
+    const nameInputs = document.getElementById("nameInputs");
+    let winners = {};
+    let playerNames = [];
+
+    function updateNameInputs() {
+        nameInputs.innerHTML = "";
+        playerNames = [];
+        for (let i = 0; i < totalPlayers; i++) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.placeholder = `User${i + 1}`;
+            input.value = `User${i + 1}`;
+            input.addEventListener("input", () => renderBracket());
+            nameInputs.appendChild(input);
+            playerNames.push(input);
+        }
+    }
+
+    select.addEventListener("change", () => {
+        totalPlayers = parseInt(select.value);
+        winners = {};
+        updateNameInputs();
+        renderBracket();
+    });
+
+    function drawBoxedText(x, yCenter, name, key, round, index, parentKey) {
+        const y = yCenter - boxH / 2;
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", y);
+        rect.setAttribute("width", boxW);
+        rect.setAttribute("height", boxH);
+        rect.setAttribute("class", "box");
+
+        if (name) {
+            rect.addEventListener("click", () => {
+                if (parentKey && winners[parentKey] && winners[parentKey] !== name) return;
+                if (winners[parentKey] === name) {
+                    delete winners[parentKey];
+                } else {
+                    winners[parentKey] = name;
+                }
+                renderBracket();
+            });
+        }
+
+        group.appendChild(rect);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", x + boxW / 2);
+        text.setAttribute("y", y + boxH / 2);
+
+        const isCurrentWinner = winners[parentKey] === name;
+        const isMatchResolved = !!winners[key];
+        const isFeederWinner = parentKey && winners[parentKey] === name && !isMatchResolved;
+        const rounds = Math.log2(totalPlayers);
+        const finalKey = `${rounds}-0`;
+        if (winners[finalKey]) {
+            console.log("Final Winner:", winners[finalKey]);
+            // or update the UI with the final winner
+            text.setAttribute("class", "winner");
+        }
+        else
+        if (isCurrentWinner && isMatchResolved) {
+            // text.setAttribute("class", "pending");
+            text.setAttribute("class", "winner");
+            console.log("parentKey: " + parentKey);
+            console.log("key: " + key);
+        } else if (isFeederWinner) {
+            text.setAttribute("class", "winner");
+        } else if (name) {
+            text.setAttribute("class", "default");
+        }
+
+        text.textContent = name;
+        group.appendChild(text);
+
+        svg.appendChild(group);
+        return y + boxH / 2;
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+        line.setAttribute("class", "line");
+        svg.appendChild(line);
+    }
+
+    function renderBracket() {
+        svg.innerHTML = "";
+        const rounds = Math.log2(totalPlayers);
+        const yCoords = {};
+
+        for (let r = 0; r <= rounds; r++) {
+            const matches = totalPlayers / Math.pow(2, r);
+            for (let i = 0; i < matches; i++) {
+                const x = 40 + r * roundSpacingX;
+                let yCenter = 80 + i * spacingY * Math.pow(2, r);
+
+                const key = `${r}-${i}`;
+                let name = "";
+
+                if (r === 0) {
+                    name = playerNames[i]?.value || `User${i + 1}`;
+                    yCoords[key] = drawBoxedText(x, yCenter, name, key, r, i, `${r + 1}-${Math.floor(i / 2)}`);
+                } else {
+                    const prevKey1 = `${r - 1}-${i * 2}`;
+                    const prevKey2 = `${r - 1}-${i * 2 + 1}`;
+                    const winner1 = winners[prevKey1];
+                    const winner2 = winners[prevKey2];
+
+                    const y1 = yCoords[prevKey1];
+                    const y2 = yCoords[prevKey2];
+                    const bothExist = y1 !== undefined && y2 !== undefined;
+                    const yMid = bothExist ? (y1 + y2) / 2 : y1 ?? y2;
+
+                    yCoords[key] = drawBoxedText(x, yMid, winners[key] || "", key, r, i);
+
+                    if (winner1) drawBoxedText(x - roundSpacingX, y1, winner1, prevKey1, r - 1, i * 2, key);
+                    if (winner2) drawBoxedText(x - roundSpacingX, y2, winner2, prevKey2, r - 1, i * 2 + 1, key);
+
+                    if (y1 !== undefined) drawLine(x - roundSpacingX + boxW, y1, x - 10, y1);
+                    if (y2 !== undefined) drawLine(x - roundSpacingX + boxW, y2, x - 10, y2);
+                    if (bothExist) drawLine(x - 10, y1, x - 10, y2);
+                    drawLine(x - 10, yMid, x, yMid);
+                }
+            }
+        }
+    }
+
+    updateNameInputs();
+    renderBracket();
+</script>
+</body>
+</html>

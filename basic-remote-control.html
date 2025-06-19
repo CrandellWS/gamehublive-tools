@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Source Toggle (Auto-Transition)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f9f9f9;
+            color: #222;
+            padding: 2em;
+            max-width: 600px;
+            margin: auto;
+        }
+        h2 {
+            margin-bottom: 0.5em;
+        }
+        .note {
+            font-size: 0.95em;
+            color: #666;
+            background: #fffbe6;
+            padding: 10px;
+            border: 1px solid #ffe58f;
+            border-radius: 5px;
+            margin-bottom: 1em;
+        }
+        label {
+            display: block;
+            margin: 0.75em 0 0.25em;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            font-size: 1em;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            margin-top: 1em;
+            margin-right: 0.5em;
+            padding: 10px 16px;
+            font-size: 1em;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005eaa;
+        }
+        pre {
+            background: #eee;
+            padding: 10px;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow: auto;
+            margin-top: 2em;
+        }
+    </style>
+</head>
+<body>
+
+<h2>OBS Source Toggle (Auto-Transition)</h2>
+
+<div class="note">
+    ⚙️ <strong>Setup:</strong> Tools → WebSocket Server Settings → enable and set a password.<br>
+    📺 In Studio Mode, ensure both Program and Preview use the same scene.
+</div>
+
+<label>Server IP</label>
+<input id="ip" value="localhost" />
+
+<label>Port</label>
+<input id="port" value="4455" />
+
+<label>Password</label>
+<input id="password" type="text" value="yjpnDxOiqfrV1BDY" />
+
+<button onclick="connect()">Connect</button>
+
+<label>Source Name</label>
+<select id="sourceDropdown">
+    <option value="">(not loaded)</option>
+</select>
+
+<div>
+    <button onclick="toggleSource(true)">Show Source</button>
+    <button onclick="toggleSource(false)">Hide Source</button>
+</div>
+
+<pre id="log"></pre>
+
+<script>
+    let ws, requestId = 1, connected = false, toggleIntent = null, studioEnabled = false, lastSceneName = null;
+
+    function log(msg) {
+        const output = document.getElementById('log');
+        output.textContent += msg + '\n';
+        console.log(msg);
+    }
+
+    function send(type, data = {}, id = null) {
+        ws.send(JSON.stringify({
+            op: 6,
+            d: {
+                requestId: id || 'req_' + (requestId++),
+                requestType: type,
+                requestData: data
+            }
+        }));
+    }
+
+    async function sha256Base64(text) {
+        const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return btoa(String.fromCharCode(...new Uint8Array(h)));
+    }
+
+    function connect() {
+        const ip = document.getElementById('ip').value;
+        const port = document.getElementById('port').value;
+        const url = `ws://${ip}:${port}`;
+        const pwd = document.getElementById('password').value;
+
+        ws = new WebSocket(url);
+
+        ws.onopen = () => log(`🔌 Connected to ${url}`);
+        ws.onerror = e => log('WebSocket error: ' + e.message);
+
+        ws.onmessage = async evt => {
+            const msg = JSON.parse(evt.data);
+            switch (msg.op) {
+                case 0:
+                    log('🌀 Hello (auth handshake)');
+                    const auth = msg.d.authentication;
+                    const c = auth?.challenge, s = auth?.salt;
+                    if (auth && c && s) {
+                        const secret = await sha256Base64(pwd + s);
+                        const resp = await sha256Base64(secret + c);
+                        ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication: resp } }));
+                    } else {
+                        ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1 } }));
+                    }
+                    break;
+                case 2:
+                    connected = true;
+                    log('✅ Authenticated');
+                    send('GetStudioModeEnabled');
+                    break;
+                case 4:
+                    log('❌ Auth failed: ' + msg.d.errorMessage);
+                    break;
+                case 7:
+                    handleResponse(msg);
+                    break;
+            }
+        };
+    }
+
+    function handleResponse(msg) {
+        const { requestType, responseData } = msg.d;
+
+        if (requestType === 'GetStudioModeEnabled') {
+            studioEnabled = responseData.studioModeEnabled;
+            log('Studio Mode: ' + (studioEnabled ? 'ON' : 'OFF'));
+            send('GetCurrentProgramScene');
+        }
+
+        else if (requestType === 'GetCurrentProgramScene') {
+            lastSceneName = responseData.currentProgramSceneName;
+            log(`🎬 Program scene: ${lastSceneName}`);
+            send('GetSceneItemList', { sceneName: lastSceneName }, msg.d.requestId + '_items');
+        }
+
+        else if (requestType === 'GetSceneItemList') {
+            const items = responseData.sceneItems;
+            const dropdown = document.getElementById('sourceDropdown');
+            dropdown.innerHTML = '';
+
+            if (!items.length) {
+                dropdown.innerHTML = '<option value="">(no sources found)</option>';
+            } else {
+                for (const item of items) {
+                    const opt = document.createElement('option');
+                    opt.value = item.sourceName;
+                    opt.textContent = item.sourceName;
+                    dropdown.appendChild(opt);
+                }
+                log(`🎯 Loaded ${items.length} scene items from "${lastSceneName}"`);
+            }
+
+            if (toggleIntent !== null) {
+                const src = dropdown.value;
+                const target = items.find(i => i.sourceName === src);
+                if (!target) return log(`❌ "${src}" not found in scene`);
+                send('SetSceneItemEnabled', {
+                    sceneName: lastSceneName,
+                    sceneItemId: target.sceneItemId,
+                    sceneItemEnabled: toggleIntent
+                });
+                log(`${toggleIntent ? '✔️ Show' : '✖️ Hide'} "${src}"`);
+                toggleIntent = null;
+
+                if (studioEnabled) {
+                    send('TriggerStudioModeTransition');
+                    log('🔁 Triggered Studio Mode Transition');
+                }
+            }
+        }
+    }
+
+    function toggleSource(vis) {
+        if (!connected) return log('❌ Not connected yet!');
+        toggleIntent = vis;
+        send('GetSceneItemList', { sceneName: lastSceneName });
+    }
+</script>
+</body>
+</html>
