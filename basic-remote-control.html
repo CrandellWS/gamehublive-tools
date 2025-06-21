@@ -65,9 +65,28 @@
 <h2>OBS Source Toggle (Auto-Transition)</h2>
 
 <div class="note">
-    ⚙️ <strong>Setup:</strong> Tools → WebSocket Server Settings → enable and set a password.<br>
-    📺 In Studio Mode, ensure both Program and Preview use the same scene.
+    ⚙️ <strong>Setup:</strong> Tools → WebSocket Server Settings → enable and set a password in OBS.<br>
+    📺 In Studio Mode, make sure both Program and Preview are showing the same scene.<br><br>
+    ⚠️ <strong>Note for mobile or secure browsers:</strong> For security reasons, most mobile browsers (and some desktop ones like Chrome with strict settings) block insecure WebSocket connections (<code>ws://</code>) from secure pages (<code>https://</code>).<br>
+    👉 To use this tool, you may need to <strong>download the file</strong> and <strong>open it locally</strong> from your device storage. No internet required – just OBS running locally.
 </div>
+
+
+<button onclick="downloadHTML()">📄 Download This Page</button>
+
+<script>
+    function downloadHTML() {
+        const htmlContent = document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'obs-remote-control.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+</script>
+
 
 <label>Server IP</label>
 <input id="ip" value="localhost" />
@@ -91,10 +110,31 @@
 </div>
 
 <pre id="log"></pre>
+<script src="https://cdn.jsdelivr.net/npm/js-sha256@0.9.0/build/sha256.min.js"></script>
+<script>
+    function sha256Base64(text) {
+        const hash = sha256.array(text); // raw bytes
+        return btoa(String.fromCharCode(...hash));
+    }
+    function downloadPage() {
+        const html = document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        a.href = url;
+        a.download = 'obs-remote.html';
+        a.click();
+
+        URL.revokeObjectURL(url); // Clean up
+    }
+
+</script>
 
 <script>
     let ws, requestId = 1, connected = false, toggleIntent = null, studioEnabled = false, lastSceneName = null;
 
+    let lastSourceName = "";
     function log(msg) {
         const output = document.getElementById('log');
         output.textContent += msg + '\n';
@@ -111,11 +151,12 @@
             }
         }));
     }
-
-    async function sha256Base64(text) {
-        const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-        return btoa(String.fromCharCode(...new Uint8Array(h)));
-    }
+    //
+    // async function sha256Base64(text) {
+    //     console.log('sha256Base64', text);
+    //     const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    //     return btoa(String.fromCharCode(...new Uint8Array(h)));
+    // }
 
     function connect() {
         const ip = document.getElementById('ip').value;
@@ -185,21 +226,24 @@
                     const opt = document.createElement('option');
                     opt.value = item.sourceName;
                     opt.textContent = item.sourceName;
+                    if (item.sourceName === lastSourceName) {
+                        opt.selected = true; // Reselect last used source if it still exists
+                    }
                     dropdown.appendChild(opt);
                 }
                 log(`🎯 Loaded ${items.length} scene items from "${lastSceneName}"`);
             }
 
-            if (toggleIntent !== null) {
-                const src = dropdown.value;
-                const target = items.find(i => i.sourceName === src);
-                if (!target) return log(`❌ "${src}" not found in scene`);
+            if (toggleIntent !== null && lastSourceName) {
+                const target = items.find(i => i.sourceName === lastSourceName);
+                if (!target) return log(`❌ "${lastSourceName}" not found in scene`);
+
                 send('SetSceneItemEnabled', {
                     sceneName: lastSceneName,
                     sceneItemId: target.sceneItemId,
                     sceneItemEnabled: toggleIntent
                 });
-                log(`${toggleIntent ? '✔️ Show' : '✖️ Hide'} "${src}"`);
+                log(`${toggleIntent ? '✔️ Show' : '✖️ Hide'} "${lastSourceName}"`);
                 toggleIntent = null;
 
                 if (studioEnabled) {
@@ -212,9 +256,12 @@
 
     function toggleSource(vis) {
         if (!connected) return log('❌ Not connected yet!');
+        const dropdown = document.getElementById('sourceDropdown');
+        lastSourceName = dropdown.value;
         toggleIntent = vis;
         send('GetSceneItemList', { sceneName: lastSceneName });
     }
+
 </script>
 </body>
 </html>
