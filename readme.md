@@ -1,4 +1,4 @@
-````markdown
+
 # 🎮 GameHubLive Tools
 
 A collection of lightweight, HTML+JS-based tools designed for streamers and live event hosts. These tools support OBS integration, tournament bracket management, and animated overlay generation — all offline-compatible and built with simplicity in mind.
@@ -47,10 +47,11 @@ Interactive SVG bracket viewer with click-to-advance logic.
 No build system or install needed. Just:
 
 ```bash
+
 git clone https://github.com/CrandellWS/gamehublive-tools.git
 cd gamehublive-tools
 open basic-remote-control.html
-````
+```
 
 Or open any `.html` file directly in your browser.
 
@@ -81,5 +82,3 @@ This project is licensed under the MIT License. See [`LICENSE`](./LICENSE) for d
 
 Created by [Bill Crandell](https://github.com/CrandellWS) — for streamers, devs, and chaos-friendly events.
 
-```
-```
