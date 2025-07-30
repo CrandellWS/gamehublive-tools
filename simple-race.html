@@ -32,13 +32,19 @@
         }
         .racer .name {
             position: absolute;
-            bottom: 48px;
+            bottom: 0;
             width: 100%;
             font-size: 12px;
+            right: 50px;
         }
         #results {
             margin-top: 30px;
         }
+        .racer img {
+            transition: transform 0s linear;
+            will-change: transform;
+        }
+
     </style>
 </head>
 <body>
@@ -150,7 +156,19 @@
                 container.appendChild(div);
                 const speedOffset = baseSpeed * (variability / 100) * (Math.random() * 2 - 1);
                 const speed = Math.max(0.01, baseSpeed + speedOffset);
-                racers.push({ el: div, x: 0, speed, finished: false, name: nameLabel.textContent, prev: null });
+                const isImg = !!srcFile;
+                racers.push({
+                    el: div,
+                    x: 0,
+                    speed,
+                    finished: false,
+                    name: nameLabel.textContent,
+                    prev: null,
+                    rotation: 0,
+                    isImg,
+                    imgEl: isImg ? div.querySelector('img') : null
+                });
+
             }
 
             const startTime = performance.now();
@@ -164,6 +182,14 @@
                     const dt = r.prev ? now - r.prev : 16;
                     r.prev = now;
                     r.x = Math.min(finishX, r.x + r.speed * dt);
+                    // Apply rolling effect if racer has an image
+                    if (r.isImg && r.imgEl) {
+                        const circumference = 48 * Math.PI; // assuming 48px "diameter" of the marble
+                        const deltaRotation = (r.speed * dt / circumference) * 360;
+                        r.rotation += deltaRotation;
+                        r.imgEl.style.transform = `rotate(${r.rotation}deg)`;
+                    }
+
                     r.el.style.transform = `translateX(${r.x}px)`;
                     if (r.x >= finishX) {
                         r.finished = true;
@@ -180,6 +206,14 @@
                         if (!r.finished) {
                             r.finished = true;
                             r.x = finishX;
+                            // Apply rolling effect if racer has an image
+                            if (r.isImg && r.imgEl) {
+                                const circumference = 48 * Math.PI; // assuming 48px "diameter" of the marble
+                                const deltaRotation = (r.speed * dt / circumference) * 360;
+                                r.rotation += deltaRotation;
+                                r.imgEl.style.transform = `rotate(${r.rotation}deg)`;
+                            }
+
                             r.el.style.transform = `translateX(${r.x}px)`;
                             results.push(r.name);
                             const li = document.createElement('li');
