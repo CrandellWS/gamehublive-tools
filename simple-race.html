@@ -25,9 +25,16 @@
             position: absolute;
             bottom: 0;
             width: 48px;
-            height: 48px;
+            height: 60px;
             font-size: 40px;
             line-height: 48px;
+            text-align: center;
+        }
+        .racer .name {
+            position: absolute;
+            bottom: 48px;
+            width: 100%;
+            font-size: 12px;
         }
         #results {
             margin-top: 30px;
@@ -37,13 +44,24 @@
 <body>
 <h1>Simple Race</h1>
 <div id="controls">
-    Number of racers:
-    <input id="numRacers" type="number" value="5" min="2" max="100">
+    Number of racers: <input id="numRacers" type="number" value="5" min="2" max="100">
     <button id="startBtn">Start Race</button>
+    <button id="clearImagesBtn">Clear Images</button>
     <br><br>
-    Default emoji: <input id="emojiInput" type="text" value="🦆" maxlength="2">
+    Emoji pool: <input id="emojiInput" type="text" value="🦆 🐢 🐇 🐎 🐖" style="width:200px">
     <br><br>
     Custom images: <input id="imageInput" type="file" multiple accept="image/*">
+    <br><br>
+    Race duration: <input id="timeAmount" type="number" value="1" min="1" style="width:60px">
+    <select id="timeUnit">
+        <option value="seconds">Seconds</option>
+        <option value="minutes" selected>Minutes</option>
+        <option value="hours">Hours</option>
+    </select>
+    <br><br>
+    Max speed variability (%): <input id="variability" type="number" value="25" min="0" max="100">
+    <br><br>
+    <div id="nameInputs"></div>
 </div>
 <div id="raceContainer"></div>
 <ol id="results"></ol>
@@ -51,13 +69,36 @@
     (() => {
         const container = document.getElementById('raceContainer');
         const startBtn = document.getElementById('startBtn');
+        const clearBtn = document.getElementById('clearImagesBtn');
         const numInput = document.getElementById('numRacers');
-        const emojiInput = document.getElementById("emojiInput");
+        const emojiInput = document.getElementById('emojiInput');
         const fileInput = document.getElementById('imageInput');
+        const timeAmount = document.getElementById('timeAmount');
+        const timeUnit = document.getElementById('timeUnit');
+        const variabilityInput = document.getElementById('variability');
+        const nameInputsDiv = document.getElementById('nameInputs');
         const resultsOl = document.getElementById('results');
 
         let animationId;
 
+        function updateNameInputs() {
+            const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
+            nameInputsDiv.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const label = document.createElement('label');
+                label.textContent = `Name ${i + 1}: `;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Racer ${i + 1}`;
+                label.appendChild(input);
+                nameInputsDiv.appendChild(label);
+                nameInputsDiv.appendChild(document.createElement('br'));
+            }
+        }
+
+        numInput.addEventListener('change', updateNameInputs);
+        document.addEventListener('DOMContentLoaded', updateNameInputs);
+        clearBtn.addEventListener('click', () => { fileInput.value = ''; });
         startBtn.addEventListener('click', startRace);
 
         function startRace() {
@@ -66,55 +107,93 @@
             container.innerHTML = '';
 
             const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
-            const defaultEmoji = emojiInput.value || "🦆";
+            const emojiPool = emojiInput.value.trim().split(/\s+/).filter(Boolean);
+            if (emojiPool.length === 0) emojiPool.push('🦆');
             const files = Array.from(fileInput.files);
+            const names = Array.from(nameInputsDiv.querySelectorAll('input')).map(inp => inp.value.trim() || inp.placeholder);
+
+            const timeVal = parseFloat(timeAmount.value) || 1;
+            let durationMs = timeVal * 1000;
+            if (timeUnit.value === 'minutes') durationMs *= 60;
+            else if (timeUnit.value === 'hours') durationMs *= 3600;
+
+            const variability = parseFloat(variabilityInput.value) || 0;
+
             const racers = [];
             const laneHeight = container.clientHeight / count;
+            const finishX = container.clientWidth - 60;
+            const baseSpeed = finishX / durationMs; // px per ms
 
             for (let i = 0; i < count; i++) {
                 const div = document.createElement('div');
                 div.className = 'racer';
                 div.style.left = '0px';
                 div.style.bottom = `${i * laneHeight}px`;
-                let srcFile = files[i] || files[0];
+
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'name';
+                nameLabel.textContent = names[i] || `Racer ${i + 1}`;
+                div.appendChild(nameLabel);
+
+                const srcFile = files[i] || files[i % files.length];
                 if (srcFile) {
                     const img = document.createElement('img');
                     img.src = URL.createObjectURL(srcFile);
+                    img.onload = () => URL.revokeObjectURL(img.src);
                     img.style.width = '48px';
                     img.style.height = '48px';
                     div.appendChild(img);
                 } else {
-                    div.textContent = defaultEmoji;
+                    div.append(emojiPool[i % emojiPool.length]);
                 }
+
                 container.appendChild(div);
-                racers.push({ el: div, x: 0, finished: false });
+                const speedOffset = baseSpeed * (variability / 100) * (Math.random() * 2 - 1);
+                const speed = Math.max(0.01, baseSpeed + speedOffset);
+                racers.push({ el: div, x: 0, speed, finished: false, name: nameLabel.textContent, prev: null });
             }
 
-            const finishX = container.clientWidth - 60; // 48px width + margin
+            const startTime = performance.now();
             const results = [];
-            function step() {
+
+            function step(now) {
                 let active = false;
-                racers.forEach((r, index) => {
+                racers.forEach(r => {
                     if (r.finished) return;
                     active = true;
-                    r.x += Math.random() * 3 + 1; // move 1-4px per frame
+                    const dt = r.prev ? now - r.prev : 16;
+                    r.prev = now;
+                    r.x = Math.min(finishX, r.x + r.speed * dt);
                     r.el.style.transform = `translateX(${r.x}px)`;
                     if (r.x >= finishX) {
                         r.finished = true;
-                        results.push(index + 1);
+                        results.push(r.name);
                         const li = document.createElement('li');
-                        li.textContent = `#${results.length} - Racer ${index + 1}`;
+                        li.textContent = `#${results.length} - ${r.name}`;
                         resultsOl.appendChild(li);
                     }
                 });
-                if (active) {
+                if (active && now - startTime < durationMs) {
                     animationId = requestAnimationFrame(step);
+                } else if (active) {
+                    racers.forEach(r => {
+                        if (!r.finished) {
+                            r.finished = true;
+                            r.x = finishX;
+                            r.el.style.transform = `translateX(${r.x}px)`;
+                            results.push(r.name);
+                            const li = document.createElement('li');
+                            li.textContent = `#${results.length} - ${r.name}`;
+                            resultsOl.appendChild(li);
+                        }
+                    });
                 }
             }
 
-            requestAnimationFrame(step);
+            animationId = requestAnimationFrame(step);
         }
     })();
 </script>
 </body>
 </html>
+
