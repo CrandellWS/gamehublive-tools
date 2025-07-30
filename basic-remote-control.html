@@ -113,6 +113,7 @@
 <div>
     <button onclick="toggleSource(true)">Show Source</button>
     <button onclick="toggleSource(false)">Hide Source</button>
+    <button onclick="swingHammerInBrowserOverlay()">💥 Swing Hammer</button>
 </div>
 
 <pre id="log"></pre>
@@ -268,6 +269,14 @@
         send('GetSceneItemList', { sceneName: lastSceneName });
     }
 
+    function swingHammerInBrowserOverlay() {
+        const hammerWindow = document.querySelector('iframe'); // assuming it's embedded
+        if (hammerWindow && hammerWindow.contentWindow) {
+            hammerWindow.contentWindow.postMessage('SWING_HAMMER', '*');
+        } else {
+            log('⚠️ Could not find hammer overlay iframe to send message');
+        }
+    }
 </script>
 </body>
 </html>

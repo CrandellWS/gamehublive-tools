@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple Race</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f0f8ff;
+        }
+        #controls {
+            margin: 20px;
+        }
+        #raceContainer {
+            position: relative;
+            margin: 20px auto;
+            max-width: 1000px;
+            height: 300px;
+            border: 2px solid #333;
+            background: linear-gradient(#bfefff 0%, #e5f7ff 100%);
+            overflow: hidden;
+        }
+        .racer {
+            position: absolute;
+            bottom: 0;
+            width: 48px;
+            height: 48px;
+            font-size: 40px;
+            line-height: 48px;
+        }
+        #results {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+<h1>Simple Race</h1>
+<div id="controls">
+    Number of racers:
+    <input id="numRacers" type="number" value="5" min="2" max="100">
+    <button id="startBtn">Start Race</button>
+    <br><br>
+    Default emoji: <input id="emojiInput" type="text" value="🦆" maxlength="2">
+    <br><br>
+    Custom images: <input id="imageInput" type="file" multiple accept="image/*">
+</div>
+<div id="raceContainer"></div>
+<ol id="results"></ol>
+<script>
+    (() => {
+        const container = document.getElementById('raceContainer');
+        const startBtn = document.getElementById('startBtn');
+        const numInput = document.getElementById('numRacers');
+        const emojiInput = document.getElementById("emojiInput");
+        const fileInput = document.getElementById('imageInput');
+        const resultsOl = document.getElementById('results');
+
+        let animationId;
+
+        startBtn.addEventListener('click', startRace);
+
+        function startRace() {
+            cancelAnimationFrame(animationId);
+            resultsOl.innerHTML = '';
+            container.innerHTML = '';
+
+            const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
+            const defaultEmoji = emojiInput.value || "🦆";
+            const files = Array.from(fileInput.files);
+            const racers = [];
+            const laneHeight = container.clientHeight / count;
+
+            for (let i = 0; i < count; i++) {
+                const div = document.createElement('div');
+                div.className = 'racer';
+                div.style.left = '0px';
+                div.style.bottom = `${i * laneHeight}px`;
+                let srcFile = files[i] || files[0];
+                if (srcFile) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(srcFile);
+                    img.style.width = '48px';
+                    img.style.height = '48px';
+                    div.appendChild(img);
+                } else {
+                    div.textContent = defaultEmoji;
+                }
+                container.appendChild(div);
+                racers.push({ el: div, x: 0, finished: false });
+            }
+
+            const finishX = container.clientWidth - 60; // 48px width + margin
+            const results = [];
+            function step() {
+                let active = false;
+                racers.forEach((r, index) => {
+                    if (r.finished) return;
+                    active = true;
+                    r.x += Math.random() * 3 + 1; // move 1-4px per frame
+                    r.el.style.transform = `translateX(${r.x}px)`;
+                    if (r.x >= finishX) {
+                        r.finished = true;
+                        results.push(index + 1);
+                        const li = document.createElement('li');
+                        li.textContent = `#${results.length} - Racer ${index + 1}`;
+                        resultsOl.appendChild(li);
+                    }
+                });
+                if (active) {
+                    animationId = requestAnimationFrame(step);
+                }
+            }
+
+            requestAnimationFrame(step);
+        }
+    })();
+</script>
+</body>
+</html>
