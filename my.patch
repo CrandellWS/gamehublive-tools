@@ -1,0 +1,236 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/simple-race.html b/simple-race.html
+index 439f461acf103e802131b280a74a6557ef010cdc..bce24d468cf16a078cd790e988bdd63333ff37a8 100644
+--- a/simple-race.html
++++ b/simple-race.html
+@@ -45,189 +45,218 @@
+             will-change: transform;
+         }
+ 
+     </style>
+ </head>
+ <body>
+ <h1>Simple Race</h1>
+ <div id="controls">
+     Number of racers: <input id="numRacers" type="number" value="5" min="2" max="100">
+     <button id="startBtn">Start Race</button>
+     <button id="clearImagesBtn">Clear Images</button>
+     <br><br>
+     Emoji pool: <input id="emojiInput" type="text" value="🦆 🐢 🐇 🐎 🐖" style="width:200px">
+     <br><br>
+     Custom images: <input id="imageInput" type="file" multiple accept="image/*">
+     <br><br>
+     Race duration: <input id="timeAmount" type="number" value="1" min="1" style="width:60px">
+     <select id="timeUnit">
+         <option value="seconds">Seconds</option>
+         <option value="minutes" selected>Minutes</option>
+         <option value="hours">Hours</option>
+     </select>
+     <br><br>
+     Max speed variability (%): <input id="variability" type="number" value="25" min="0" max="100">
+     <br><br>
++    Spin speed multiplier: <input id="spinSpeed" type="number" value="1" min="0" step="0.1" style="width:60px">
++    <label><input id="spinEnabled" type="checkbox" checked> Enable Spin</label>
++    <br><br>
++    Sway amplitude (px): <input id="swayAmount" type="number" value="0" min="0" style="width:60px">
++    <label><input id="swayEnabled" type="checkbox"> Enable Sway</label>
++    <br><br>
+     <div id="nameInputs"></div>
+ </div>
+ <div id="raceContainer"></div>
+ <ol id="results"></ol>
+ <script>
+     (() => {
+         const container = document.getElementById('raceContainer');
+         const startBtn = document.getElementById('startBtn');
+         const clearBtn = document.getElementById('clearImagesBtn');
+         const numInput = document.getElementById('numRacers');
+         const emojiInput = document.getElementById('emojiInput');
+         const fileInput = document.getElementById('imageInput');
+         const timeAmount = document.getElementById('timeAmount');
+         const timeUnit = document.getElementById('timeUnit');
+         const variabilityInput = document.getElementById('variability');
++        const spinSpeedInput = document.getElementById('spinSpeed');
++        const spinEnabledInput = document.getElementById('spinEnabled');
++        const swayAmountInput = document.getElementById('swayAmount');
++        const swayEnabledInput = document.getElementById('swayEnabled');
+         const nameInputsDiv = document.getElementById('nameInputs');
+         const resultsOl = document.getElementById('results');
+ 
+         let animationId;
+ 
+         function updateNameInputs() {
+             const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
+             nameInputsDiv.innerHTML = '';
+             for (let i = 0; i < count; i++) {
+                 const label = document.createElement('label');
+                 label.textContent = `Name ${i + 1}: `;
+                 const input = document.createElement('input');
+                 input.type = 'text';
+                 input.placeholder = `Racer ${i + 1}`;
+                 label.appendChild(input);
+                 nameInputsDiv.appendChild(label);
+                 nameInputsDiv.appendChild(document.createElement('br'));
+             }
+         }
+ 
+         numInput.addEventListener('change', updateNameInputs);
+         document.addEventListener('DOMContentLoaded', updateNameInputs);
+         clearBtn.addEventListener('click', () => { fileInput.value = ''; });
+         startBtn.addEventListener('click', startRace);
+ 
+         function startRace() {
+             cancelAnimationFrame(animationId);
+             resultsOl.innerHTML = '';
+             container.innerHTML = '';
+ 
+             const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
+             const emojiPool = emojiInput.value.trim().split(/\s+/).filter(Boolean);
+             if (emojiPool.length === 0) emojiPool.push('🦆');
+             const files = Array.from(fileInput.files);
+             const names = Array.from(nameInputsDiv.querySelectorAll('input')).map(inp => inp.value.trim() || inp.placeholder);
+ 
+             const timeVal = parseFloat(timeAmount.value) || 1;
+             let durationMs = timeVal * 1000;
+             if (timeUnit.value === 'minutes') durationMs *= 60;
+             else if (timeUnit.value === 'hours') durationMs *= 3600;
+ 
+             const variability = parseFloat(variabilityInput.value) || 0;
++            const spinMultiplier = parseFloat(spinSpeedInput.value) || 1;
++            const spinEnabled = spinEnabledInput.checked;
++            const swayEnabled = swayEnabledInput.checked;
++            const swayRange = parseFloat(swayAmountInput.value) || 0;
+ 
+             const racers = [];
+             const laneHeight = container.clientHeight / count;
+             const finishX = container.clientWidth - 60;
+             const baseSpeed = finishX / durationMs; // px per ms
+ 
+             for (let i = 0; i < count; i++) {
+                 const div = document.createElement('div');
+                 div.className = 'racer';
+                 div.style.left = '0px';
+                 div.style.bottom = `${i * laneHeight}px`;
+ 
+                 const nameLabel = document.createElement('div');
+                 nameLabel.className = 'name';
+                 nameLabel.textContent = names[i] || `Racer ${i + 1}`;
+                 div.appendChild(nameLabel);
+ 
+                 const srcFile = files[i] || files[i % files.length];
+                 if (srcFile) {
+                     const img = document.createElement('img');
+                     img.src = URL.createObjectURL(srcFile);
+                     img.onload = () => URL.revokeObjectURL(img.src);
+                     img.style.width = '48px';
+                     img.style.height = '48px';
+                     div.appendChild(img);
+                 } else {
+                     div.append(emojiPool[i % emojiPool.length]);
+                 }
+ 
+                 container.appendChild(div);
+                 const speedOffset = baseSpeed * (variability / 100) * (Math.random() * 2 - 1);
+                 const speed = Math.max(0.01, baseSpeed + speedOffset);
+                 const isImg = !!srcFile;
+                 racers.push({
+                     el: div,
+                     x: 0,
+                     speed,
+                     finished: false,
+                     name: nameLabel.textContent,
+                     prev: null,
+                     rotation: 0,
+                     isImg,
+-                    imgEl: isImg ? div.querySelector('img') : null
++                    imgEl: isImg ? div.querySelector('img') : null,
++                    swayPhase: Math.random() * Math.PI * 2
+                 });
+ 
+             }
+ 
+             const startTime = performance.now();
+             const results = [];
+ 
+             function step(now) {
+                 let active = false;
+                 racers.forEach(r => {
+                     if (r.finished) return;
+                     active = true;
+                     const dt = r.prev ? now - r.prev : 16;
+                     r.prev = now;
+                     r.x = Math.min(finishX, r.x + r.speed * dt);
+-                    // Apply rolling effect if racer has an image
+-                    if (r.isImg && r.imgEl) {
++                    let yOffset = 0;
++                    if (swayEnabled) {
++                        r.swayPhase += dt * 0.005;
++                        yOffset = Math.sin(r.swayPhase) * swayRange;
++                    }
++                    if (spinEnabled && r.isImg && r.imgEl) {
+                         const circumference = 48 * Math.PI; // assuming 48px "diameter" of the marble
+-                        const deltaRotation = (r.speed * dt / circumference) * 360;
++                        const deltaRotation = (r.speed * dt / circumference) * 360 * spinMultiplier;
+                         r.rotation += deltaRotation;
+                         r.imgEl.style.transform = `rotate(${r.rotation}deg)`;
++                    } else if (r.isImg && r.imgEl) {
++                        r.imgEl.style.transform = '';
+                     }
+ 
+-                    r.el.style.transform = `translateX(${r.x}px)`;
++                    r.el.style.transform = `translate(${r.x}px, ${yOffset}px)`;
+                     if (r.x >= finishX) {
+                         r.finished = true;
+                         results.push(r.name);
+                         const li = document.createElement('li');
+                         li.textContent = `#${results.length} - ${r.name}`;
+                         resultsOl.appendChild(li);
+                     }
+                 });
+                 if (active && now - startTime < durationMs) {
+                     animationId = requestAnimationFrame(step);
+                 } else if (active) {
+                     racers.forEach(r => {
+                         if (!r.finished) {
+                             r.finished = true;
+                             r.x = finishX;
+-                            // Apply rolling effect if racer has an image
+-                            if (r.isImg && r.imgEl) {
++                            // Apply effects one last time
++                            const dtFinal = 16;
++                            let yOffset = 0;
++                            if (swayEnabled) {
++                                r.swayPhase += dtFinal * 0.005;
++                                yOffset = Math.sin(r.swayPhase) * swayRange;
++                            }
++                            if (spinEnabled && r.isImg && r.imgEl) {
+                                 const circumference = 48 * Math.PI; // assuming 48px "diameter" of the marble
+-                                const deltaRotation = (r.speed * dt / circumference) * 360;
++                                const deltaRotation = (r.speed * dtFinal / circumference) * 360 * spinMultiplier;
+                                 r.rotation += deltaRotation;
+                                 r.imgEl.style.transform = `rotate(${r.rotation}deg)`;
++                            } else if (r.isImg && r.imgEl) {
++                                r.imgEl.style.transform = '';
+                             }
+ 
+-                            r.el.style.transform = `translateX(${r.x}px)`;
++                            r.el.style.transform = `translate(${r.x}px, ${yOffset}px)`;
+                             results.push(r.name);
+                             const li = document.createElement('li');
+                             li.textContent = `#${results.length} - ${r.name}`;
+                             resultsOl.appendChild(li);
+                         }
+                     });
+                 }
+             }
+ 
+             animationId = requestAnimationFrame(step);
+         }
+     })();
+ </script>
+ </body>
+ </html>
+ 
+ 
+EOF
+)

@@ -18,10 +18,10 @@
             position: relative;
             margin: 20px auto;
             max-width: 90%;
-            height: 65vh;
+            height: 75vh;
             border: 2px solid #333;
             background: linear-gradient(#bfefff 0%, #e5f7ff 100%);
-            overflow: hidden;
+            /*overflow: hidden;*/
         }
 
         @media screen and (max-width: 768px) {
@@ -33,23 +33,23 @@
         }
 
         .racer {
+            /*todo dont forget the emotes */
             position: absolute;
             bottom: 0;
-            width: 48px;
-            height: 60px;
-            font-size: 40px;
-            line-height: 48px;
+            width: 5vh;
+            height: 5vh;
             text-align: center;
         }
 
         .racer .name {
             position: absolute;
-            top: -50%;
-            right: 50%;
-            width: 10vw;
-            font-size: 12px;
-            transform-origin: center center;
+            top: -1.2em;
+            font-size: 0.8em;
+            right: 100%;
+            transform: translateX(-50%);
+            white-space: nowrap;
         }
+
 
         #results {
             margin-top: 30px;
@@ -99,12 +99,33 @@
             animation: pulse 1s ease;
         }
 
-        .spin {
-            animation: spin 1s linear infinite;
-        }
-
         .float {
             animation: float 2s ease-in-out infinite;
+        }
+
+        .spin-float {
+            animation: spinFloat 2s linear infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+                animation-timing-function: ease-in-out;
+            }
+            50% {
+                transform: translateY(-10px);
+                animation-timing-function: ease-in-out;
+            }
         }
 
         @keyframes float {
@@ -116,66 +137,165 @@
             }
         }
 
+        @keyframes spinFloat {
+            0%   { transform: rotate(0deg) translateY(0); }
+            25%  { transform: rotate(90deg) translateY(-10px); }
+            50%  { transform: rotate(180deg) translateY(-20px); }
+            75%  { transform: rotate(270deg) translateY(-10px); }
+            100% { transform: rotate(360deg) translateY(0); }
+        }
+
         .status-text {
             font-size: 12px;
             color: #666;
             margin: 5px;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .modal .close {
+            color: #aaa;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal .close:hover {
+            color: #000;
+        }
+
+        .start-btn {
+            background: linear-gradient(to right, #00b894, #00cec9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 20px auto;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .start-btn:hover {
+            background: linear-gradient(to right, #00cec9, #00b894);
+            transform: translateY(-2px);
+        }
+
+        .start-btn:active {
+            transform: translateY(0px) scale(0.98);
+        }
+
+        .racer-content {
+            width: 5vh;
+            height: 5vh;
+            font-size: 5vh;
+            transition: transform 0s linear;
+            will-change: transform;
+            margin: 0 auto;
+        }
+
+
     </style>
 </head>
 <body>
-<h1>Simple Race with Animations</h1>
-<div id="controls">
-    Number of racers: <input id="numRacers" type="number" value="5" min="2" max="100">
-    <button id="startBtn">Start Race</button>
-    <button id="clearImagesBtn">Clear Images</button>
-    <br><br>
 
-    <!-- Animation Controls -->
-    <div class="animation-controls">
-        <strong>Race Options:</strong><br>
-        <button class="toggle-btn" id="spinToggle" onclick="RaceAnimations.toggleSpin()">
-            Toggle Spin
-        </button>
-        <button class="toggle-btn" id="floatToggle" onclick="RaceAnimations.toggleFloat()">
-            Toggle Float
-        </button>
-        <div class="status-text">
-            Spin: <span id="spinStatus">OFF</span> |
-            Float: <span id="floatStatus">OFF</span>
-        </div>
+<button id="openSettingsBtn" class="toggle-btn" style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+    ⚙️ Settings
+</button>
 
-        <strong>Win Effects:</strong><br>
-        <label>
-            <input type="radio" name="winEffect" value="bounce" checked> Bounce
-        </label>
-        <label>
-            <input type="radio" name="winEffect" value="pulse"> Pulse
-        </label>
-        <label>
-            <input type="radio" name="winEffect" value="celebration"> Celebration
-        </label>
-        <label>
-            <input type="radio" name="winEffect" value="none"> None
-        </label>
+<!-- Modal -->
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeSettingsBtn">&times;</span>
+        <div id="controls">
+
+
+            Number of racers: <input id="numRacers" type="number" value="5" min="2" max="100">
+            <button id="clearImagesBtn">Clear Images</button>
+            <br><br>
+
+            <!-- Animation Controls -->
+            <div class="animation-controls">
+                <strong>Race Options:</strong><br>
+                <button class="toggle-btn" id="spinToggle" onclick="RaceAnimations.toggleSpin()">
+                    Toggle Spin
+                </button>
+                <button class="toggle-btn" id="floatToggle" onclick="RaceAnimations.toggleFloat()">
+                    Toggle Float
+                </button>
+                <div class="status-text">
+                    Spin: <span id="spinStatus">OFF</span> |
+                    Float: <span id="floatStatus">OFF</span>
+                </div>
+
+                <strong>Win Effects:</strong><br>
+                <label>
+                    <input type="radio" name="winEffect" value="bounce" checked> Bounce
+                </label>
+                <label>
+                    <input type="radio" name="winEffect" value="pulse"> Pulse
+                </label>
+                <label>
+                    <input type="radio" name="winEffect" value="celebration"> Celebration
+                </label>
+                <label>
+                    <input type="radio" name="winEffect" value="none"> None
+                </label>
+            </div>
+
+            Emoji pool: <input id="emojiInput" type="text" value="🦆 🐢 🐇 🐎 🐖" style="width:200px">
+            <br><br>
+            Custom images: <input id="imageInput" type="file" multiple accept="image/*">
+            <br><br>
+            Race duration: <input id="timeAmount" type="number" value="15" min="1" style="width:60px">
+            <select id="timeUnit">
+                <option value="seconds" selected>Seconds</option>
+                <option value="minutes">Minutes</option>
+                <option value="hours">Hours</option>
+            </select>
+            <br><br>
+            Max speed variability (%): <input id="variability" type="number" value="25" min="0" max="100">
+            <br><br>
+            <div id="nameInputs"></div>
+
+        </div> <!-- Controls content will be moved here -->
     </div>
-
-    Emoji pool: <input id="emojiInput" type="text" value="🦆 🐢 🐇 🐎 🐖" style="width:200px">
-    <br><br>
-    Custom images: <input id="imageInput" type="file" multiple accept="image/*">
-    <br><br>
-    Race duration: <input id="timeAmount" type="number" value="1" min="1" style="width:60px">
-    <select id="timeUnit">
-        <option value="seconds">Seconds</option>
-        <option value="minutes" selected>Minutes</option>
-        <option value="hours">Hours</option>
-    </select>
-    <br><br>
-    Max speed variability (%): <input id="variability" type="number" value="25" min="0" max="100">
-    <br><br>
-    <div id="nameInputs"></div>
 </div>
+<h1>Simple Race with Animations</h1>
+
 <div id="raceContainer"></div>
+<button id="startBtn" class="start-btn">🏁 Start Race</button>
+<button id="resetBtn" class="start-btn">🔄 Reset</button>
+<button id="shuffleBtn" class="start-btn">🔀 Shuffle</button>
+<div id="countdownTimer" style="margin-top: 10px; font-weight: bold; color: #2d3436;"></div>
+
 <ol id="results"></ol>
 
 <script>
@@ -204,16 +324,6 @@
             this.floatActive = !this.floatActive;
             const toggleBtn = document.getElementById('floatToggle');
             const status = document.getElementById('floatStatus');
-            // todo with ai next
-            // const racers = document.querySelectorAll('.racer');
-            //
-            // racers.forEach(racer => {
-            //     if (this.floatActive) {
-            //         racer.classList.add('float');
-            //     } else {
-            //         racer.classList.remove('float');
-            //     }
-            // });
 
             if (this.floatActive) {
                 toggleBtn.classList.add('active');
@@ -227,13 +337,17 @@
         },
 
         applyToRacer: function (racerElement) {
-            if (this.spinActive) {
+            racerElement.classList.remove('spin', 'float', 'spin-float');
+
+            if (this.spinActive && this.floatActive) {
+                racerElement.classList.add('spin-float');
+            } else if (this.spinActive) {
                 racerElement.classList.add('spin');
-            }
-            if (this.floatActive) {
+            } else if (this.floatActive) {
                 racerElement.classList.add('float');
             }
         },
+
 
         triggerWinEffect: function(racerElement) {
             const selectedEffect = document.querySelector('input[name="winEffect"]:checked').value;
@@ -296,6 +410,76 @@
             }
         }
     };
+    let shuffledOrder;
+
+
+    //AI? why just before renderRacersPreview idk whatever
+    document.getElementById('shuffleBtn')?.addEventListener('click', () => {
+        const count = parseInt(document.getElementById('numRacers').value, 10) || 2;
+        shuffledOrder = Array.from({ length: count }, (_, i) => i);
+        shuffleArray(shuffledOrder);
+        renderRacersPreview();
+    });
+
+    function renderRacersPreview() {
+        const container = document.getElementById('raceContainer');
+        const numInput = document.getElementById('numRacers');
+        const emojiInput = document.getElementById('emojiInput');
+        const fileInput = document.getElementById('imageInput');
+        const nameInputsDiv = document.getElementById('nameInputs');
+
+        const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
+        const emojiPool = emojiInput.value.trim().split(/\s+/).filter(Boolean);
+        if (emojiPool.length === 0) emojiPool.push('🦆');
+        const files = Array.from(fileInput.files);
+        const names = Array.from(nameInputsDiv.querySelectorAll('input')).map(inp => inp.value.trim() || inp.placeholder);
+
+        const laneHeight = container.clientHeight / count;
+        container.innerHTML = '';
+
+        const order = shuffledOrder || Array.from({ length: count }, (_, i) => i);
+        for (let lane = 0; lane < count; lane++) {
+            const i = order[lane];
+            const div = document.createElement('div');
+            div.className = 'racer';
+            div.style.left = '0px';
+
+            const containerHeightVh = 75;
+            const racerHeightVh = 5;
+            const availableHeight = containerHeightVh - racerHeightVh;
+            const verticalStep = availableHeight / Math.max(1, count - 1);
+            div.style.bottom = `${lane * verticalStep}vh`;
+
+
+
+            const contentWrapper = document.createElement('div');
+            contentWrapper.className = 'racer-content';
+
+            const srcFile = files[i] || files[i % files.length];
+            if (srcFile) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(srcFile);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                img.style.width = 'auto';
+                img.style.height = '5vh';
+                contentWrapper.appendChild(img);
+            } else {
+                contentWrapper.textContent = emojiPool[i % emojiPool.length];
+            }
+
+            // Apply current animation settings to the content wrapper
+            RaceAnimations.applyToRacer(contentWrapper);
+
+            div.appendChild(contentWrapper);
+
+            const nameLabel = document.createElement('div');
+            nameLabel.className = 'name';
+            nameLabel.textContent = names[i] || `Racer ${i + 1}`;
+            div.appendChild(nameLabel);
+
+            container.appendChild(div);
+        }
+    }
 
     function animate({ duration, onUpdate, onComplete, easing = t => t }) {
         const start = performance.now();
@@ -311,8 +495,25 @@
         requestAnimationFrame(frame);
     }
 
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    function getShuffledOrder(count) {
+        const order = Array.from({ length: count }, (_, i) => i);
+        for (let i = order.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [order[i], order[j]] = [order[j], order[i]];
+        }
+        return order;
+    }
+
     // Original race logic with animation integration
     (() => {
+        let shuffledOrder = null;
         const container = document.getElementById('raceContainer');
         const startBtn = document.getElementById('startBtn');
         const clearBtn = document.getElementById('clearImagesBtn');
@@ -336,11 +537,14 @@
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.placeholder = `Racer ${i + 1}`;
+                input.addEventListener('input', renderRacersPreview); // auto-update preview
                 label.appendChild(input);
                 nameInputsDiv.appendChild(label);
                 nameInputsDiv.appendChild(document.createElement('br'));
             }
+            renderRacersPreview();
         }
+
 
         numInput.addEventListener('change', updateNameInputs);
         document.addEventListener('DOMContentLoaded', updateNameInputs);
@@ -349,10 +553,37 @@
         });
         startBtn.addEventListener('click', startRace);
 
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.addEventListener('click', () => {
+            cancelAnimationFrame(animationId);
+            isPaused = false;
+
+            // Clear container and reset controls
+            container.innerHTML = '';
+            resultsOl.innerHTML = '';
+            countdownDiv.textContent = '';
+
+            renderRacersPreview();
+
+            document.querySelectorAll('.racer-content').forEach(el => {
+                el.classList.remove('spin', 'float', 'spin-float');
+            });
+
+            startBtn.disabled = false;
+            startBtn.textContent = '🏁 Start Race';
+            shuffledOrder = null;
+
+        });
+
+        const countdownDiv = document.getElementById('countdownTimer');
+
         function startRace() {
             cancelAnimationFrame(animationId);
+            startBtn.disabled = true;
+
             resultsOl.innerHTML = '';
             container.innerHTML = '';
+
 
             const count = Math.max(2, Math.min(100, parseInt(numInput.value, 10) || 2));
             const emojiPool = emojiInput.value.trim().split(/\s+/).filter(Boolean);
@@ -365,6 +596,17 @@
             if (timeUnit.value === 'minutes') durationMs *= 60;
             else if (timeUnit.value === 'hours') durationMs *= 3600;
 
+
+            let remainingMs = durationMs;
+            const endTime = performance.now() + durationMs;
+
+            function updateCountdown(now) {
+                remainingMs = Math.max(0, endTime - now);
+                const seconds = Math.ceil(remainingMs / 1000);
+                countdownDiv.textContent = `⏱ ${seconds}s remaining`;
+            }
+
+
             const variability = parseFloat(variabilityInput.value) || 0;
 
             const racers = [];
@@ -372,39 +614,59 @@
             const finishX = container.clientWidth - 60;
             const baseSpeed = finishX / durationMs;
 
-            for (let i = 0; i < count; i++) {
+            const order = shuffledOrder || Array.from({ length: count }, (_, i) => i);
+            for (let lane = 0; lane < count; lane++) {
+                const i = order[lane];
+
                 const div = document.createElement('div');
                 div.className = 'racer';
                 div.style.left = '0px';
-                div.style.bottom = `${i * laneHeight}px`;
+                const containerHeightVh = 75;
+                const racerHeightVh = 5;
+                const availableHeight = containerHeightVh - racerHeightVh;
+                const verticalStep = availableHeight / Math.max(1, count - 1);
+                div.style.bottom = `${lane * verticalStep}vh`;
 
-                const nameLabel = document.createElement('div');
-                nameLabel.className = 'name';
-                nameLabel.textContent = names[i] || `Racer ${i + 1}`;
-                div.appendChild(nameLabel);
 
+
+                // Create the inner content wrapper (this rotates)
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'racer-content';
+
+                // Add image or emoji inside content wrapper
                 const srcFile = files[i] || files[i % files.length];
                 if (srcFile) {
                     const img = document.createElement('img');
                     img.src = URL.createObjectURL(srcFile);
                     img.onload = () => URL.revokeObjectURL(img.src);
-                    img.style.width = '48px';
-                    img.style.height = '48px';
-                    div.appendChild(img);
+                    img.style.height = '5vh';
+                    img.style.width = 'auto';
+                    contentWrapper.appendChild(img);
                 } else {
-                    div.append(emojiPool[i % emojiPool.length]);
+                    contentWrapper.textContent = emojiPool[i % emojiPool.length];
                 }
+
+                // Add the content wrapper to racer
+                div.appendChild(contentWrapper);
+
+                // Create and append the name label (outside the rotating part)
+                const nameLabel = document.createElement('div');
+                nameLabel.className = 'name';
+                nameLabel.textContent = names[i] || `Racer ${i + 1}`;
+                div.appendChild(nameLabel);
 
                 container.appendChild(div);
 
-                // Apply current animation settings to new racer
-                RaceAnimations.applyToRacer(div);
+                // Apply current animation settings to the content wrapper
+                RaceAnimations.applyToRacer(contentWrapper);
 
                 const speedOffset = baseSpeed * (variability / 100) * (Math.random() * 2 - 1);
                 const speed = Math.max(0.01, baseSpeed + speedOffset);
                 const isImg = !!srcFile;
+
                 racers.push({
                     el: div,
+                    content: contentWrapper,
                     x: 0,
                     speed,
                     finished: false,
@@ -412,20 +674,23 @@
                     prev: null,
                     rotation: 0,
                     isImg,
-                    imgEl: isImg ? div.querySelector('img') : null
+                    imgEl: isImg ? contentWrapper.querySelector('img') : null
                 });
             }
+
 
             const startTime = performance.now();
             const results = [];
 
             function step(now) {
+
                 let active = false;
                 racers.forEach(r => {
                     if (r.finished) return;
                     active = true;
                     const dt = r.prev ? now - r.prev : 16;
                     r.prev = now;
+                    updateCountdown(now);
                     r.x = Math.min(finishX, r.x + r.speed * dt);
 
                     if (RaceAnimations.spinActive) {
@@ -436,11 +701,16 @@
                         r.rotation = 0; // Reset if spin is off
                     }
 
-// Apply both translate and rotate
-                    r.el.style.transform = `translateX(${r.x}px) rotate(${r.rotation}deg)`;
+                    // Apply both translate and rotate
+                    r.el.style.left = `${r.x}px`;
+                    r.content.style.transform = `rotate(${r.rotation}deg)`;
+
 
                     if (r.x >= finishX) {
                         r.finished = true;
+
+                        r.content.classList.remove('spin', 'float', 'spin-float');
+
                         results.push(r.name);
 
                         // Trigger win effect for first place
@@ -460,7 +730,14 @@
                     racers.forEach(r => {
                         if (!r.finished) {
                             r.finished = true;
+                            const dt = r.prev ? now - r.prev : 16;
+                            r.prev = now;
                             r.x = finishX;
+
+                            // Stop spin if active
+                            if (r.el.classList.contains('spin')) {
+                                r.el.classList.remove('spin');
+                            }
 
                             if (RaceAnimations.spinActive) {
                                 const circumference = 48 * Math.PI;
@@ -471,19 +748,51 @@
                             }
 
                             // Apply both translate and rotate
-                            r.el.style.transform = `translateX(${r.x}px) rotate(${r.rotation}deg)`;
+                            r.el.style.left = `${r.x}px`;
+                            r.content.style.transform = `rotate(${r.rotation}deg)`;
+
                             results.push(r.name);
                             const li = document.createElement('li');
                             li.textContent = `#${results.length} - ${r.name}`;
                             resultsOl.appendChild(li);
+
+                            startBtn.disabled = false;
+                            startBtn.textContent = '🏁 Start Race';
+                            countdownDiv.textContent = '';
                         }
                     });
                 }
+
             }
 
             animationId = requestAnimationFrame(step);
         }
     })();
+
+    // Modal Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('settingsModal');
+        const openBtn = document.getElementById('openSettingsBtn');
+        const closeBtn = document.getElementById('closeSettingsBtn');
+        const controls = document.querySelector('#controls');
+
+        openBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            renderRacersPreview();
+        });
+
+        window.addEventListener('click', e => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                // renderRacersPreview(); // todo consider this
+            }
+        });
+    });
+
 </script>
 </body>
 </html>
