@@ -3,7 +3,7 @@ const state = {
     settings: {
         title: 'Giveaway Grand Prix',
         logoUrl: '',
-        durationSec: 35,
+        durationSec: 90,
         finishPctFromRight: 12,
         chaos: 0.6,
         rubber: 0.7,
@@ -431,6 +431,7 @@ function applyHeader() {
 }
 
 function applyBanners() {
+    // Keep --banner-h unitless (multiplied by --vh in CSS)
     bannerTop.style.setProperty('--banner-h', state.settings.bannerTopH);
     bannerBottom.style.setProperty('--banner-h', state.settings.bannerBotH);
     if (state.settings.bannerTopUrl) {
@@ -572,43 +573,71 @@ function placeholderFor(motion) {
 
 // ===== Race engine =====
 function startRace() {
+    if (modal && getComputedStyle(modal).display !== 'none') saveSettings();
     if (state.race.running) return;
-    if (state.players.length < 2) {
-        alert('Add at least 2 players.');
-        return;
-    }
-    applyHeader();
-    layoutTrack();
-    applyBanners();
+    if (state.players.length < 2) { alert('Add at least 2 players.'); return; }
+
+    applyHeader(); layoutTrack(); applyBanners(); setViewportVars();
 
     const lanes = [...track.querySelectorAll('.lane')];
     const trackRect = track.getBoundingClientRect();
-    const finishX = trackRect.width * (1 - clamp(state.settings.finishPctFromRight, 2, 30) / 100);
-    const expectedFrames = state.settings.durationSec * 60;
+    const finishX_px = trackRect.width * (1 - clamp(state.settings.finishPctFromRight, 2, 30) / 100);
 
-    // build racers
+    // === World & camera setup ===
+    const FPS = 60;
+    const totalFrames = Math.max(1, state.settings.durationSec) * FPS;
+    const pxPerUnit = finishX_px / 100;      // world→screen scale (100 world units ≈ finish line)
+    const screenCenter = finishX_px * 0.55;  // where the “camera center” sits on screen
+    const baseCamSpeedWU = (100 / totalFrames); // camera forward speed in world units/frame
+
+    // racers in world space
     state.race.racers = state.players.map((p, i) => {
         const node = lanes[i].querySelector('.racer');
-        const img = node.querySelector('.avatar');
         node.style.left = '0px';
+        fxInit?.({ node }); // safe if you already added FX; otherwise no-op
         return {
             id: p.id,
             name: p.name || `Player ${i + 1}`,
             motion: (state.settings.fxAll === 'off' ? p.motion : state.settings.fxAll),
-            node,
-            laneNode: lanes[i],
-            x: 0,
-            prevX: 0,
-            vBase: rand(1.10, 1.55),
-            vSkill: rand(0.94, 1.06),
+            node, laneNode: lanes[i],
+            finished: false, finishOrder: 0,
+            // world state
+            worldX: 0,
+            worldV: 0,
+            vBase: rand(0.98, 1.02),
+            vSkill: rand(0.98, 1.02),
             noiseT: Math.random() * 1000,
-            finished: false,
-            finishOrder: 0
         };
     });
 
-    // plan phases for visible lead changes
-    state.race.phases = planLeadPhases(state.race.racers.map(r => r.id), expectedFrames, state.settings.leadPhases);
+    // camera state
+    const cam = { x: 0, v: baseCamSpeedWU, frame: 0 };
+
+    // tuning
+    const lerp = (a,b,t)=> a + (b-a)*t;
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    const chaos  = clamp01(state.settings.chaos);
+    const rubber = clamp01(state.settings.rubber);
+
+    const noiseAmp       = lerp(0.02, 0.18, chaos);
+    const burstEPM       = lerp(  5,  40, chaos);
+    const brakeEPM       = lerp(  3,  25, chaos);
+    const pBurst         = burstEPM / (60*FPS);
+    const pBrake         = brakeEPM / (60*FPS);
+    const burstMagWU     = lerp(0.30, 2.50, chaos) * (100/totalFrames);
+    const brakeMagWU     = lerp(0.20, 1.80, chaos) * (100/totalFrames);
+    const catchUpMax     = lerp(0.20, 1.00, rubber);
+    const catchUpPow     = lerp(1.40, 0.85, rubber);
+    const leaderNerfMax  = lerp(0.00, 0.10, rubber);
+    const endPackTighten = lerp(0.00, 0.60, rubber);
+
+    // visuals
+    ensureHUD();
+    updateHUD({ timeLeftSec: state.settings.durationSec, leader: '—', chaos: state.settings.chaos, rubber: state.settings.rubber, gapPx: 0 });
+    ensureLeaderBadge();
+    const gate = buildStartGate();
+    enableParallax(lanes); // make lane backgrounds scrollable
+
     state.race.running = true;
     state.race.startTs = performance.now();
     state.race.winner = null;
@@ -616,151 +645,122 @@ function startRace() {
     bannerOverlay.style.display = 'none';
     lanesRemoveWinner();
 
-    let frame = 0, order = 0;
+    const preRollMs = 2600;
+    let order = 0, launched = false;
 
     function tick(ts) {
-        frame++;
-        const rs = state.race.racers;
-        const leaderX = Math.max(...rs.map(r => r.x));
-        const tailX   = Math.min(...rs.map(r => r.x));
-        const spread  = Math.max(1, leaderX - tailX);
-        const favored = currentFavoredId(state.race.phases, frame);
-        const chaos   = clamp(Math.max(0, state.settings.chaos), 0, 1);
-        const rubber  = clamp(Math.max(0, state.settings.rubber), 0, 1);
+        const elapsed = ts - state.race.startTs;
 
-        // small helpers local to tick (keeps this snippet self-contained)
-        const lerp = (a,b,t)=> a + (b-a)*t;
-        const clamp01 = x => Math.max(0, Math.min(1, x));
-
-        // tuning derived from sliders
-        const noiseAmp        = lerp(0.02, 0.18, chaos);
-        const burstEPM        = lerp(  2,  20, chaos);  // events per minute
-        const brakeEPM        = lerp(  1,  14, chaos);
-        const pBurst          = burstEPM / (60*60);     // ~60 fps
-        const pBrake          = brakeEPM / (60*60);
-        const burstMag        = lerp(0.30, 2.50, chaos);
-        const brakeMag        = lerp(0.20, 1.80, chaos);
-
-        const catchUpMax      = lerp(0.00, 0.65, rubber);
-        const catchUpPow      = lerp(1.40, 0.85, rubber);
-        const leaderNerfMax   = lerp(0.00, 0.10, rubber);
-        const endPackTighten  = lerp(0.00, 0.60, rubber);
-
-        // randomize update order to avoid bias
-        const idxs = rs.map((_, i) => i);
-        for (let i = idxs.length - 1; i > 0; i--) {
-            const j = (Math.random() * (i + 1)) | 0;
-            [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+        // countdown freeze
+        if (elapsed < preRollMs) {
+            drawGate(gate, elapsed, preRollMs);
+            updateParallax(lanes, cam.x, pxPerUnit); // even countdown can subtly move if you want; leave cam.x=0 so no move
+            state.race.rafId = requestAnimationFrame(tick);
+            return;
+        } else if (!launched) {
+            gate.remove(); launched = true;
+            // hole-shot: tiny world burst so they jump relative to cam when it starts moving
+            for (const r of state.race.racers) r.worldX += (baseCamSpeedWU * 18) * (0.8 + Math.random()*0.6);
         }
 
+        cam.frame++;
+
+        // camera: forward base + gentle follow of pack median so group stays around screenCenter
+        const xs = state.race.racers.map(r => r.worldX);
+        const leaderX = Math.max(...xs);
+        const tailX   = Math.min(...xs);
+        const medianX = xs.sort((a,b)=>a-b)[(xs.length-1)>>1];
+        const spread  = Math.max(0.001, leaderX - tailX);
+
+        // follow term nudges camera toward median so the pack hovers mid-screen
+        const follow = (medianX - cam.x) * 0.015;
+        cam.v = baseCamSpeedWU + follow;
+        cam.x += cam.v;
+
+        // racer dynamics in world space
         const finishedThisFrame = [];
-
-        for (const k of idxs) {
-            const r = rs[k];
+        for (const r of state.race.racers) {
             if (r.finished) continue;
-            r.prevX = r.x;
 
-            // baseline to hit duration
-            const targetV = (finishX / expectedFrames);
-
-            // pack-relative position 0..1 (1 = farthest behind)
-            const behind = spread > 1 ? (leaderX - r.x) / spread : 0;
-
-            // smoothed wobble
+            const behind01 = (leaderX - r.worldX) / Math.max(0.001, spread);
             r.noiseT += 0.013 + Math.random() * 0.01;
-            const smoothNoise = (Math.sin(r.noiseT*2.1) + Math.cos(r.noiseT*1.3)) * 0.5; // -1..1
+            const smoothNoise = (Math.sin(r.noiseT*2.1) + Math.cos(r.noiseT*1.3)) * 0.5;
 
-            // random events
-            let burst = 0, brake = 0;
-            if (Math.random() < pBurst) burst = targetV * rand(0.5, 1) * burstMag;
-            if (Math.random() < pBrake) brake = targetV * rand(0.5, 1) * brakeMag;
+            let burstWU = 0, brakeWU = 0;
+            if (Math.random() < pBurst) burstWU = (rand(0.5,1) * burstMagWU);
+            if (Math.random() < pBrake) brakeWU = (rand(0.5,1) * brakeMagWU);
 
-            // phase favoritism (kept from your original)
-            const phaseBoost = (favored && r.id === favored) ? 0.2 : 0;
-
-            // catch-up (nonlinear) & leader nerf
-            const catchUp   = Math.pow(clamp01(behind), catchUpPow) * catchUpMax;
-            const isLeader  = (leaderX - r.x) < (0.10 * Math.max(1, spread));
+            const catchUp   = Math.pow(clamp01(behind01), catchUpPow) * catchUpMax;
+            const isLeader  = (leaderX - r.worldX) < (0.1*spread);
             const leaderNerf = isLeader ? leaderNerfMax : 0;
 
-            // compose velocity
-            let v = targetV
+            // base racer speed ~ cam speed, then add personality & effects
+            let vWU = cam.v
                 * r.vBase * r.vSkill
-                * (1 + (smoothNoise * noiseAmp) + catchUp + phaseBoost - leaderNerf);
+                * (1 + (smoothNoise * noiseAmp) + catchUp - leaderNerf);
 
-            v += burst;
-            v -= brake;
+            vWU += burstWU;
+            vWU -= brakeWU;
 
-            // fair-finish guard (gentler; respects sliders)
-            const gateX = finishX * 0.92;
-            if (r.x >= gateX && !r.finished) {
-                const within = rs.some(o => o !== r && Math.abs(o.x - r.x) <= finishX * (0.06 + 0.06*rubber));
-                if (!within) {
-                    const ease = lerp(0.3, 1.2, 1 - chaos) * (0.5 + 0.5*rubber);
-                    v -= targetV * ease;
-                }
-            }
-
-            // endgame pack tightening (subtle bunching near finish)
-            const distLeft = Math.max(0, finishX - r.x);
-            const tightenK = (distLeft < (finishX * 0.25)) ? (endPackTighten * (1 - distLeft/(finishX*0.25))) : 0;
-            if (tightenK > 0 && rs.length >= 2){
+            // endgame pack tighten to dramatize finish
+            const distLeftWU = Math.max(0, 100 - r.worldX);
+            const tightenK = (distLeftWU < 25) ? (endPackTighten * (1 - distLeftWU/25)) : 0;
+            if (tightenK > 0 && state.race.racers.length >= 2) {
                 const localAvg = (leaderX + tailX) * 0.5;
-                const pull = (localAvg - r.x) * 0.0009 * tightenK;
-                v += pull;
+                vWU += (localAvg - r.worldX) * 0.002 * tightenK;
             }
 
-            // apply movement
-            v = Math.max(v, targetV * 0.02); // don't stall
-            r.x += v;
+            // integrate
+            r.worldV = Math.max(vWU, baseCamSpeedWU * 0.2);
+            r.worldX += r.worldV;
 
-            // DOM update
-            const px = Math.min(r.x, finishX - 2);
-            r.node.style.left = `${px}px`;
+            // map to screen
+            const screenX = (r.worldX - cam.x) * pxPerUnit + screenCenter;
+            r.node.style.left = Math.round(screenX) + 'px';
+            // optional micro-tilt from chaos
+            r.node.style.rotate = (smoothNoise * noiseAmp * 16).toFixed(2) + 'deg';
 
-            if (!r.finished && r.prevX < finishX && r.x >= finishX) {
-                finishedThisFrame.push(r);
-            }
+            // finish when racer’s world crosses 100 WU
+            if (!r.finished && r.worldX >= 100) finishedThisFrame.push(r);
         }
 
-        // ==== THIS BLOCK PICKS THE WINNER ====
-        // First time any racers cross finish this frame, we compute
-        // who crossed *first* using fractional position within the frame.
+        // background parallax scroll
+        updateParallax(lanes, cam.x, pxPerUnit);
+
+        // resolve winner & podium
         if (finishedThisFrame.length && !state.race.winner) {
-            let first = null, bestFrac = Infinity;
-            for (const r of finishedThisFrame) {
-                const frac = (finishX - r.prevX) / Math.max(1e-6, (r.x - r.prevX));
-                if (frac < bestFrac) { bestFrac = frac; first = r; }
-            }
-            if (first) state.race.winner = first;  // ← winner set here
+            // pick earliest crossing by back-solve
+            let first = null, bestX = Infinity;
+            for (const r of finishedThisFrame) if (r.worldX < bestX) { bestX = r.worldX; first = r; }
+            if (first) state.race.winner = first;
         }
-
-        // =====================================
-
-        // finalize finish flags for everyone who crossed this frame
         if (finishedThisFrame.length) {
-            finishedThisFrame.sort((a, b) => b.x - a.x);
-            for (const r of finishedThisFrame) {
-                if (!r.finished) { r.finished = true; r.finishOrder = ++order; }
-            }
+            finishedThisFrame.sort((a,b)=>a.worldX-b.worldX);
+            for (const r of finishedThisFrame) if (!r.finished) { r.finished = true; r.finishOrder = ++order; }
         }
 
-        // stop condition: once winner exists and enough finishers or overtime
-        if (state.race.winner) {
-            if (order >= Math.ceil(rs.length * 0.35) || frame > expectedFrames + 240) {
-                state.race.running = false;
-                cancelAnimationFrame(state.race.rafId);
-                showWinnerAndPodium(state.race.winner, finishX);
-                return;
-            }
+        // HUD + leader badge
+        const leader = state.race.racers.slice().sort((a,b)=>b.worldX-a.worldX)[0];
+        const timeLeftSec = Math.max(0, (totalFrames - cam.frame) / FPS);
+        updateHUD({ timeLeftSec, leader: leader?.name || '—', chaos: state.settings.chaos, rubber: state.settings.rubber, gapPx: Math.round((leaderX - tailX) * pxPerUnit) });
+        moveLeaderBadge(leader);
+
+        // stop criteria: winner + top3 or time overtime
+        const haveTop3 = state.race.racers.filter(r => r.finished).length >= Math.min(3, state.race.racers.length);
+        const overtime = cam.frame > (totalFrames + 240);
+        if (state.race.winner && (haveTop3 || overtime)) {
+            state.race.running = false;
+            cancelAnimationFrame(state.race.rafId);
+            showWinnerAndPodium(state.race.winner, finishX_px);
+            return;
         }
 
         state.race.rafId = requestAnimationFrame(tick);
     }
 
-
     state.race.rafId = requestAnimationFrame(tick);
 }
+
 
 function planLeadPhases(ids, frames, k) {
     if (!ids.length) return [];
@@ -792,7 +792,7 @@ function showWinnerAndPodium(winner, finishX) {
         bannerOverlay.style.display = 'grid';
         confettiBurst();
 
-        // Podium: 1st = true crosser, 2nd/3rd by current x
+        // Podium: 1st = winner by fractional cross; 2nd/3rd by distance
         const rs = state.race.racers.slice().sort((a, b) => b.x - a.x);
         const podium = [winner.name];
         for (const r of rs) {
@@ -801,10 +801,17 @@ function showWinnerAndPodium(winner, finishX) {
         }
         podiumBox.innerHTML = `<div>🥇 ${podium[0] || ''}</div><div>🥈 ${podium[1] || ''}</div><div>🥉 ${podium[2] || ''}</div>`;
         podiumBox.style.display = 'block';
+
+        // Hide HUD at the end for cleaner winner moment
+        const hud = document.getElementById('raceHUD');
+        if (hud) hud.style.display = 'none';
+        const crown = document.getElementById('leaderBadge');
+        if (crown) crown.remove();
     } catch (e) {
         console.error(e);
     }
 }
+
 
 function lanesRemoveWinner() {
     [...track.querySelectorAll('.lane')].forEach(l => l.classList.remove('winner'));
@@ -958,28 +965,207 @@ const FPS = 60;
 function lerp(a,b,t){ return a + (b-a)*t; }
 function clamp01(x){ return Math.max(0, Math.min(1, x)); }
 
+// Keep this helper in sync with the tuned numbers above
 function getTuning(chaos, rubber){
     chaos  = clamp01(chaos);
     rubber = clamp01(rubber);
 
     // Randomness / events
-    const noiseAmp = lerp(0.02, 0.18, chaos);      // wobble amplitude
-    const burstEPM = lerp(  2,  20, chaos);        // bursts per racer per minute
-    const brakeEPM = lerp(  1,  14, chaos);        // brakes per racer per minute
+    const noiseAmp = lerp(0.02, 0.18, chaos);
+    const burstEPM = lerp(  5,  40, chaos);
+    const brakeEPM = lerp(  3,  25, chaos);
     const pBurst   = burstEPM / (60*FPS);
     const pBrake   = brakeEPM / (60*FPS);
-    const burstMag = lerp(0.30, 2.50, chaos);      // × targetV
+    const burstMag = lerp(0.30, 2.50, chaos);
     const brakeMag = lerp(0.20, 1.80, chaos);
 
     // Catch-up
-    const catchUpMax     = lerp(0.00, 0.65, rubber); // up to +65% boost in back
-    const catchUpPow     = lerp(1.40, 0.85, rubber); // curve shape
-    const leaderNerfMax  = lerp(0.00, 0.10, rubber); // up to -10% near front
-    const endPackTighten = lerp(0.00, 0.60, rubber); // bunching near finish
+    const catchUpMax     = lerp(0.20, 1.00, rubber);
+    const catchUpPow     = lerp(1.40, 0.85, rubber);
+    const leaderNerfMax  = lerp(0.00, 0.10, rubber);
+    const endPackTighten = lerp(0.00, 0.60, rubber);
 
     return { noiseAmp, pBurst, pBrake, burstMag, brakeMag, catchUpMax, catchUpPow, leaderNerfMax, endPackTighten };
 }
+function ensureHUD(){
+    let hud = document.getElementById('raceHUD');
+    if (hud) { hud.style.display = 'grid'; return; }
+    hud = document.createElement('div');
+    hud.id = 'raceHUD';
+    hud.style.position = 'absolute';
+    hud.style.right = '10px';
+    hud.style.bottom = '10px';
+    hud.style.zIndex = '5';
+    hud.style.display = 'grid';
+    hud.style.gap = '4px';
+    hud.style.padding = '8px 10px';
+    hud.style.borderRadius = '10px';
+    hud.style.background = 'rgba(0,0,0,.55)';
+    hud.style.border = '1px solid #22304b';
+    hud.style.fontWeight = '800';
+    hud.innerHTML = `
+      <div id="hudLine1">⏱️ Time: —</div>
+      <div id="hudLine2">👑 Leader: —</div>
+      <div id="hudLine3">🎲 Chaos: — | 🤝 Rubber: —</div>
+      <div id="hudLine4">📏 Gap: —</div>
+    `;
+    track.appendChild(hud);
+}
+function updateHUD({timeLeftSec, leader, chaos, rubber, gapPx}){
+    const l1 = document.getElementById('hudLine1');
+    const l2 = document.getElementById('hudLine2');
+    const l3 = document.getElementById('hudLine3');
+    const l4 = document.getElementById('hudLine4');
+    if (l1) l1.textContent = `⏱️ Time: ${Math.ceil(timeLeftSec)}s`;
+    if (l2) l2.textContent = `👑 Leader: ${leader}`;
+    if (l3) l3.textContent = `🎲 Chaos: ${Number(chaos).toFixed(2)} | 🤝 Rubber: ${Number(rubber).toFixed(2)}`;
+    if (l4) l4.textContent = `📏 Gap: ${Math.round(gapPx)} px`;
+}
+function ensureLeaderBadge(){
+    if (document.getElementById('leaderBadge')) return;
+    const b = document.createElement('div');
+    b.id = 'leaderBadge';
+    b.textContent = '👑';
+    b.style.position = 'absolute';
+    b.style.zIndex = '6';
+    b.style.fontSize = '24px';
+    b.style.transform = 'translate(-6px, -28px)';
+    track.appendChild(b);
+}
+function moveLeaderBadge(leader){
+    const crown = document.getElementById('leaderBadge');
+    if (!crown || !leader) return;
+    const rect = leader.node.getBoundingClientRect();
+    const tRect = track.getBoundingClientRect();
+    crown.style.left = (rect.left - tRect.left) + 'px';
+    crown.style.top  = (rect.top  - tRect.top)  + 'px';
+}
+function buildStartGate(){
+    const g = document.createElement('div');
+    g.style.position = 'absolute';
+    g.style.inset = '0';
+    g.style.display = 'grid';
+    g.style.placeItems = 'center';
+    g.style.zIndex = '4';
+    const lights = document.createElement('div');
+    lights.style.display = 'flex';
+    lights.style.gap = '12px';
+    ['🔴','🟠','🟢'].forEach((t,i)=>{
+        const d = document.createElement('div');
+        d.textContent = t;
+        d.style.fontSize = '48px';
+        d.style.opacity = '0.25';
+        d.dataset.idx = String(i);
+        lights.appendChild(d);
+    });
+    const txt = document.createElement('div');
+    txt.style.marginTop = '8px';
+    txt.style.fontWeight = '900';
+    txt.style.fontSize = 'clamp(20px, 4vw, 48px)';
+    txt.textContent = 'Get Ready…';
+    g.append(lights, txt);
+    track.appendChild(g);
+    return g;
+}
+function drawGate(gate, elapsed, total){
+    if (!gate) return;
+    const dots = [...gate.querySelectorAll('[data-idx]')];
+    const stage = Math.min(2, Math.floor((elapsed/total)*3)); // 0,1,2
+    dots.forEach((d,i)=> d.style.opacity = i <= stage ? '1' : '0.25');
+    const txt = gate.lastElementChild;
+    txt.textContent = stage < 2 ? (stage === 0 ? '3…' : '2…') : 'GO!';
+}
 
+function fxInit(r){
+    // container
+    const fx = document.createElement('div');
+    fx.style.position = 'absolute';
+    fx.style.inset = '0';
+    fx.style.pointerEvents = 'none';
+    r.node.appendChild(fx);
+    r._fx = { root: fx };
+
+    // burst/brake badge
+    const badge = document.createElement('div');
+    Object.assign(badge.style, {
+        position: 'absolute', left: '50%', top: '-34px', transform: 'translateX(-50%)',
+        fontSize: '18px', fontWeight: '900', textShadow: '0 2px 6px rgba(0,0,0,.6)',
+        opacity: '0', transition: 'opacity .12s ease, transform .12s ease'
+    });
+    fx.appendChild(badge);
+    r._fx.badge = badge;
+
+    // catch-up trail (left of racer)
+    const trail = document.createElement('div');
+    Object.assign(trail.style, {
+        position: 'absolute', right: '100%', top: '40%',
+        width: '0px', height: '6px', borderRadius: '3px',
+        background: 'linear-gradient(90deg, rgba(0,255,180,.0) 0%, rgba(0,255,180,.8) 100%)',
+        opacity: '0'
+    });
+    fx.appendChild(trail);
+    r._fx.trail = trail;
+
+    // leader drag halo
+    const halo = document.createElement('div');
+    Object.assign(halo.style, {
+        position: 'absolute', left: '50%', top: '50%',
+        width: '120%', height: '120%', borderRadius: '50%',
+        transform: 'translate(-50%,-50%)',
+        boxShadow: '0 0 0 0 rgba(255,80,80,0)',
+        pointerEvents: 'none'
+    });
+    fx.appendChild(halo);
+    r._fx.halo = halo;
+}
+
+function fxShow(r, type, intensity=1){
+    const b = r._fx?.badge; if (!b) return;
+    if (type === 'boost') { b.textContent = '⚡'; }
+    else if (type === 'brake') { b.textContent = '🛑'; }
+    b.style.opacity = '1';
+    b.style.transform = 'translateX(-50%) translateY(-6px)';
+    setTimeout(() => {
+        b.style.opacity = '0';
+        b.style.transform = 'translateX(-50%) translateY(0)';
+    }, 260 + 180*intensity);
+}
+
+function fxUpdateAssist(r, catchUp){
+    const t = r._fx?.trail; if (!t) return;
+    if (catchUp <= 0.001){ t.style.opacity = '0'; return; }
+    const px = Math.min(80, 16 + catchUp * 120);
+    t.style.width = px + 'px';
+    t.style.opacity = Math.min(0.95, 0.25 + catchUp * 0.9).toFixed(2);
+}
+
+function fxUpdateLeaderNerf(r, nerf){
+    const h = r._fx?.halo; if (!h) return;
+    if (nerf <= 0.001){ h.style.boxShadow = '0 0 0 0 rgba(255,80,80,0)'; return; }
+    // soft red drag glow proportional to nerf
+    const px = (6 + 28 * nerf).toFixed(0);
+    const a  = Math.min(0.55, 0.15 + nerf * 0.7).toFixed(2);
+    h.style.boxShadow = `0 0 ${px}px ${Math.round(px/4)}px rgba(255,80,80,${a})`;
+}
+
+function enableParallax(lanes){
+    // ensure each lane uses a repeating grid background that can scroll
+    lanes.forEach(l => {
+        l.style.backgroundRepeat = 'repeat';
+        // keep whatever your current background is; just make sure position is settable
+        if (!l.style.backgroundPosition) l.style.backgroundPosition = '0px 0px';
+    });
+}
+
+function updateParallax(lanes, camX_WU, pxPerUnit){
+    const offsetPx = Math.round(-camX_WU * pxPerUnit);
+    // move grid left as camera advances
+    lanes.forEach(l => {
+        const pos = l.style.backgroundPosition || '0px 0px';
+        const y = pos.split(' ')[1] || '0px';
+        l.style.backgroundPosition = `${offsetPx}px ${y}`;
+    });
+}
 
 // ===== Init =====
 function init() {

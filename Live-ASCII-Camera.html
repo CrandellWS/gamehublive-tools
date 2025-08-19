@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Live ASCII Camera + Matrix Overlay (Popout)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #000000;       /* Set to #00ff00 for chroma key if needed */
+            --fg: #ffffff;
+            --font: 12px "Fira Mono", "Consolas", monospace;
+        }
+        html, body {
+            height: 100%;
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+            font-family: monospace;
+        }
+        .wrap {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100%;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto auto;
+            gap: 8px;
+            padding: 10px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            align-items: center;
+        }
+        .controls .matrix {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: auto auto 1fr auto 1fr auto;
+            gap: 10px;
+            align-items: center;
+            margin-top: 6px;
+        }
+        label { font-size: 12px; opacity: 0.95; }
+        select, input[type="number"], input[type="checkbox"] {
+            background: #0b0b0b; color: #ddd; border: 1px solid #333; padding: 4px;
+        }
+        input[type="range"] { width: 100%; }
+        button { padding: 6px 10px; background:#222; color:#ddd; border:1px solid #333; cursor:pointer; }
+        #stageHolder, #popHolder {
+            position: relative; height: 100%;
+        }
+        #asciiCanvas, #matrixCanvas { width: 100%; height: 100%; display: block; }
+        #asciiCanvas { image-rendering: pixelated; }
+        #matrixCanvas { position: absolute; inset: 0; pointer-events: none; }
+        .hint { font-size: 11px; opacity: 0.75; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="controls">
+        <label>Camera
+            <select id="cameraSelect"></select>
+        </label>
+        <label>Resolution
+            <select id="resSelect">
+                <option value="640x360">640×360</option>
+                <option value="1280x720" selected>1280×720</option>
+                <option value="1920x1080">1920×1080</option>
+            </select>
+        </label>
+        <label>Cell (px)
+            <input id="cellSize" type="range" min="4" max="20" step="1" value="9" />
+        </label>
+        <label>Chars
+            <select id="charset">
+                <option value="@#%*+=-:. " selected>@#%*+=-:. (dense)</option>
+                <option value="$@B%8&WM#*oahkbdpqwmZ0OQLCJUYXzcvunxr/|()1{}[]?-_+~<>i!lI;:,^`'.  ">
+                    Long ramp
+                </option>
+                <option value="::#WM@%$=+;:.">::#WM@%$=+;:. (short)</option>
+                <option value="█▓▒░ .">Blocks</option>
+                <option value="01 ">Binary</option>
+            </select>
+        </label>
+        <label class="hint">
+            <input type="checkbox" id="useColor" /> Color
+        </label>
+
+        <div style="display:flex; gap:8px; justify-content:flex-end">
+            <button id="startBtn">Start</button>
+            <button id="stopBtn" disabled>Stop</button>
+        </div>
+
+        <!-- Popout controls -->
+        <div style="display:flex; gap:8px; justify-content:flex-end">
+            <button id="popBtn" title="Open output in a clean window">Pop Out</button>
+            <button id="returnBtn" disabled>Return</button>
+        </div>
+
+        <!-- Matrix controls -->
+        <div class="matrix">
+            <label><input type="checkbox" id="mxEnable" /> Matrix</label>
+            <span>Speed</span>
+            <input id="mxSpeed" type="range" min="0.2" max="3.0" step="0.1" value="1.2" />
+            <span>Density</span>
+            <input id="mxDensity" type="range" min="0.2" max="2.0" step="0.1" value="1.0" />
+            <span>Glow</span>
+            <input id="mxGlow" type="range" min="0" max="2.0" step="0.05" value="1.0" />
+        </div>
+    </div>
+
+    <!-- Stage holder (in main window); we'll MOVE this whole #stage into popup and back -->
+    <div id="stageHolder">
+        <div id="stage">
+            <canvas id="asciiCanvas"></canvas>
+            <canvas id="matrixCanvas"></canvas>
+            <!-- Hidden working surfaces -->
+            <video id="video" playsinline muted style="display:none"></video>
+            <canvas id="work" style="display:none"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========= Common refs / state =========
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    // UI
+    const camSel = document.getElementById('cameraSelect');
+    const resSel = document.getElementById('resSelect');
+    const cellRange = document.getElementById('cellSize');
+    const charsetSel = document.getElementById('charset');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const useColor = document.getElementById('useColor');
+
+    const mxEnable = document.getElementById('mxEnable');
+    const mxSpeedEl = document.getElementById('mxSpeed');
+    const mxDensityEl = document.getElementById('mxDensity');
+    const mxGlowEl = document.getElementById('mxGlow');
+
+    const stage = document.getElementById('stage');
+    const stageHolder = document.getElementById('stageHolder');
+
+    // Canvases/Video
+    const asciiCanvas = document.getElementById('asciiCanvas');
+    const matrixCanvas = document.getElementById('matrixCanvas');
+    const video = document.getElementById('video');
+    const work = document.getElementById('work');
+
+    const asciiCtx = asciiCanvas.getContext('2d');
+    const matrixCtx = matrixCanvas.getContext('2d');
+    const workCtx = work.getContext('2d', { willReadFrequently: true });
+
+    // Render loop and stream
+    let rafId = null;
+    let stream = null;
+
+    // Where are we rendering? Default to the main window.
+    let hostWin = window;
+    let pop = null;
+
+    // ========= ASCII camera =========
+    const presetRamps = {
+        "@#%*+=-:. ": "@#%*+=-:. ",
+        "long": "$@B%8&WM#*oahkbdpqwmZ0OQLCJUYXzcvunxr/|()1{}[]?-_+~<>i!lI;:,^`'.  ",
+        "short": "::#WM@%$=+;:.",
+        "blocks": "█▓▒░ .",
+        "binary": "01 "
+    };
+
+    async function listDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            camSel.innerHTML = '';
+            for (const d of devices) {
+                if (d.kind === 'videoinput') {
+                    const opt = document.createElement('option');
+                    opt.value = d.deviceId;
+                    opt.textContent = d.label || `Camera ${camSel.length + 1}`;
+                    camSel.appendChild(opt);
+                }
+            }
+        } catch (e) {
+            console.error('Device enumeration failed:', e);
+            alert('Could not list cameras. Check browser permissions.');
+        }
+    }
+
+    async function start() {
+        stop(); // ensure previous stopped
+        const [w, h] = resSel.value.split('x').map(Number);
+        const deviceId = camSel.value || undefined;
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    width: { ideal: w }, height: { ideal: h },
+                    frameRate: { ideal: 30, max: 60 }
+                },
+                audio: false
+            });
+        } catch (e) {
+            console.error('getUserMedia error:', e);
+            alert('Camera access failed. Check permissions or if another app is using it.');
+            return;
+        }
+
+        video.srcObject = stream;
+        await video.play();
+
+        // Size and begin loops
+        resizeCanvas();
+        hostWin.addEventListener('resize', resizeCanvas);
+
+        stopBtn.disabled = false;
+        startBtn.disabled = true;
+
+        renderLoop();
+        if (mxEnable.checked) startMatrix();
+    }
+
+    function stop() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+
+        if (stream) {
+            for (const t of stream.getTracks()) t.stop();
+            stream = null;
+        }
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+
+        hostWin.removeEventListener('resize', resizeCanvas);
+        asciiCtx.clearRect(0, 0, asciiCanvas.width, asciiCanvas.height);
+        stopMatrix(true);
+    }
+
+    function getRamp() {
+        const v = charsetSel.value;
+        if (v in presetRamps) return presetRamps[v];
+        return v;
+    }
+
+    function cssViewportSize() {
+        // If popped, use popup inner size; else compute area under controls
+        if (hostWin === window) {
+            const viewH = window.innerHeight - document.querySelector('.controls').offsetHeight;
+            return { w: window.innerWidth, h: viewH };
+        } else {
+            // full popup content area
+            return { w: hostWin.innerWidth, h: hostWin.innerHeight };
+        }
+    }
+
+    function resizeCanvas() {
+        const dpr = hostWin.devicePixelRatio || 1;
+        const { w, h } = cssViewportSize();
+
+        asciiCanvas.width = Math.floor(w * dpr);
+        asciiCanvas.height = Math.floor(h * dpr);
+        asciiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        matrixCanvas.width = asciiCanvas.width;
+        matrixCanvas.height = asciiCanvas.height;
+        matrixCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        if (video.videoWidth && video.videoHeight) {
+            work.width = video.videoWidth;
+            work.height = video.videoHeight;
+        }
+        setupMatrixColumns();
+    }
+
+    function renderLoop() {
+        const cell = parseInt(cellRange.value, 10) || 9;
+        const ramp = getRamp();
+
+        const dpr = hostWin.devicePixelRatio || 1;
+        const cols = Math.max(1, Math.floor(asciiCanvas.width / dpr / cell));
+        const rows = Math.max(1, Math.floor(asciiCanvas.height / dpr / cell));
+
+        if (video.readyState >= 2) {
+            workCtx.drawImage(video, 0, 0, work.width, work.height);
+        }
+
+        const sxStep = work.width / cols;
+        const syStep = work.height / rows;
+
+        asciiCtx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#000';
+        asciiCtx.fillRect(0, 0, asciiCanvas.width, asciiCanvas.height);
+        asciiCtx.font = `bold ${clamp(Math.floor(cell * 1.1), 6, 40)}px monospace`;
+        asciiCtx.textBaseline = 'top';
+
+        for (let y = 0; y < rows; y++) {
+            const sy = Math.floor(y * syStep);
+            const sh = Math.max(1, Math.floor(syStep));
+            for (let x = 0; x < cols; x++) {
+                const sx = Math.floor(x * sxStep);
+                const sw = Math.max(1, Math.floor(sxStep));
+                const img = workCtx.getImageData(sx, sy, sw, sh).data;
+
+                let rSum = 0, gSum = 0, bSum = 0;
+                const count = sw * sh;
+                const step = count > 200 ? 4 : 1;
+                for (let i = 0; i < count; i += step) {
+                    const idx = i * 4;
+                    rSum += img[idx];
+                    gSum += img[idx + 1];
+                    bSum += img[idx + 2];
+                }
+                const denom = Math.ceil(count / step);
+                const r = rSum / denom, g = gSum / denom, b = bSum / denom;
+
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                const idx = Math.floor((1 - lum / 255) * (ramp.length - 1));
+                const ch = ramp[idx];
+
+                asciiCtx.fillStyle = useColor.checked ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
+                    : (getComputedStyle(document.documentElement).getPropertyValue('--fg') || '#fff');
+                asciiCtx.fillText(ch, x * cell, y * cell);
+            }
+        }
+
+        rafId = hostWin.requestAnimationFrame(renderLoop);
+    }
+
+    // ========= Matrix overlay =========
+    let mxRaf = null;
+    let mxSpeed = parseFloat(mxSpeedEl.value);
+    let mxDensity = parseFloat(mxDensityEl.value);
+    let mxGlow = parseFloat(mxGlowEl.value);
+    let mxCols = 0, mxColY = [];
+    const mxGlyphs = Array.from('ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ012345789@#$%&*+=-');
+
+    function setupMatrixColumns() {
+        const dpr = hostWin.devicePixelRatio || 1;
+        const cssW = asciiCanvas.width / dpr;
+        const cssH = asciiCanvas.height / dpr;
+
+        const fontPx = Math.max(12, Math.round(cssH / 40));
+        matrixCtx.font = `${fontPx}px monospace`;
+        matrixCtx.textBaseline = 'top';
+
+        const colW = fontPx * 0.6;
+        mxCols = Math.max(8, Math.ceil((cssW / colW) * mxDensity));
+        mxColY = new Array(mxCols).fill(0).map(() => Math.random() * cssH);
+    }
+
+    function startMatrix() {
+        if (mxRaf) return;
+        matrixCtx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+        setupMatrixColumns();
+        matrixLoop();
+    }
+
+    function stopMatrix(clear = false) {
+        if (mxRaf) hostWin.cancelAnimationFrame(mxRaf);
+        mxRaf = null;
+        if (clear) matrixCtx.clearRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+    }
+
+    function matrixLoop() {
+        // trail fade that preserves transparency
+        matrixCtx.save();
+        matrixCtx.globalCompositeOperation = 'destination-out';
+        matrixCtx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+        matrixCtx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+        matrixCtx.restore();
+
+        matrixCtx.save();
+        matrixCtx.globalCompositeOperation = 'source-over';
+        matrixCtx.shadowColor = 'rgba(0,255,128,0.6)';
+        matrixCtx.shadowBlur = 10 * mxGlow;
+        matrixCtx.fillStyle = '#27ff7a';
+
+        const dpr = hostWin.devicePixelRatio || 1;
+        const cssH = asciiCanvas.height / dpr;
+        const fontPx = parseInt(matrixCtx.font, 10) || 16;
+        const stepY = fontPx * mxSpeed;
+        const colW = fontPx * 0.6;
+
+        for (let i = 0; i < mxCols; i++) {
+            const x = Math.floor(i * colW);
+            const y = mxColY[i];
+            const g = mxGlyphs[(Math.random() * mxGlyphs.length) | 0];
+            matrixCtx.fillText(g, x, y);
+
+            const ny = y + stepY;
+            if (ny > cssH || Math.random() < 0.005) mxColY[i] = Math.random() * -200;
+            else mxColY[i] = ny;
+        }
+        matrixCtx.restore();
+
+        mxRaf = hostWin.requestAnimationFrame(matrixLoop);
+    }
+
+    mxEnable.addEventListener('change', () => mxEnable.checked ? startMatrix() : stopMatrix(true));
+    mxSpeedEl.addEventListener('input', e => mxSpeed = parseFloat(e.target.value) || 1.2);
+    mxDensityEl.addEventListener('input', e => { mxDensity = parseFloat(e.target.value) || 1.0; setupMatrixColumns(); });
+    mxGlowEl.addEventListener('input', e => mxGlow = parseFloat(e.target.value) || 1.0);
+
+    // ========= Popout handling =========
+    const popBtn = document.getElementById('popBtn');
+    const returnBtn = document.getElementById('returnBtn');
+
+    popBtn.addEventListener('click', () => {
+        if (pop && !pop.closed) { pop.focus(); return; }
+
+        // Open a minimal window (real “chromeless” is OS/browser-limited)
+        pop = window.open('', 'ascii_pop', 'width=1280,height=720,menubar=0,toolbar=0,location=0,status=0,scrollbars=0,resizable=1');
+        if (!pop) { alert('Popup blocked. Allow popups for this site.'); return; }
+
+        // Build a clean document
+        pop.document.write(`
+            <!doctype html><html><head>
+            <title>Output</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+            <style>
+                html,body { margin:0; height:100%; background:#000; overflow:hidden; cursor:none; }
+                #popHolder { position:relative; width:100vw; height:100vh; }
+            </style>
+            </head><body><div id="popHolder"></div></body></html>
+        `);
+        pop.document.close();
+
+        // Move the live stage (canvases+video) into the popup
+        const popHolder = pop.document.getElementById('popHolder');
+        popHolder.appendChild(stage);
+
+        // Switch render host to popup (resize + animation frames)
+        hostWin.removeEventListener('resize', resizeCanvas);
+        hostWin = pop;
+        hostWin.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Keep loops running in popup’s RAF
+        if (rafId) { cancelAnimationFrame(rafId); rafId = hostWin.requestAnimationFrame(renderLoop); }
+        if (mxRaf) { cancelAnimationFrame(mxRaf); mxRaf = hostWin.requestAnimationFrame(matrixLoop); }
+
+        // Wire return & auto-restore when popup closes
+        returnBtn.disabled = false;
+        pop.addEventListener('beforeunload', restoreToMain, { once: true });
+        pop.focus();
+    });
+
+    returnBtn.addEventListener('click', restoreToMain);
+
+    function restoreToMain() {
+        if (hostWin !== window) {
+            hostWin.removeEventListener('resize', resizeCanvas);
+            hostWin = window;
+            window.addEventListener('resize', resizeCanvas);
+
+            // Move stage back under the controls
+            stageHolder.appendChild(stage);
+            resizeCanvas();
+
+            if (rafId) { cancelAnimationFrame(rafId); rafId = window.requestAnimationFrame(renderLoop); }
+            if (mxRaf) { cancelAnimationFrame(mxRaf); mxRaf = window.requestAnimationFrame(matrixLoop); }
+        }
+        try { if (pop && !pop.closed) pop.close(); } catch {}
+        pop = null;
+        returnBtn.disabled = true;
+    }
+
+    // ========= Boot =========
+    (async () => {
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(s => s.getTracks().forEach(t => t.stop()))
+                .catch(() => {});
+            await listDevices();
+        } catch (e) {
+            console.warn('Initial device list failed:', e);
+        }
+    })();
+    startBtn.addEventListener('click', start);
+    stopBtn.addEventListener('click', stop);
+</script>
+</body>
+</html>

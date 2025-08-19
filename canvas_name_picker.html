@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Name Picker (Canvas Demo)</title>
+  <style>
+    :root { --bg:#0b1020; --ink:#e9eef7; --accent:#7dd3fc; --accent2:#a78bfa; --warn:#f59e0b; }
+    html, body { height: 100%; overflow: hidden; }
+    body { margin: 0; background: radial-gradient(1200px 700px at 20% 10%, #152040, #090d1a 70%); color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
+    .app { display: grid; grid-template-columns: minmax(280px, 1fr) 2.5fr minmax(260px, 1fr); gap: 16px; padding: 16px; height: 100vh; box-sizing: border-box; }
+    .panel { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); min-height: 0; }
+    .panel h2 { margin: 0 0 10px; font-size: 16px; letter-spacing: .3px; color: #dbeafe; }
+    .left .row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    textarea, input, button, select { width: 100%; background: rgba(255,255,255,0.06); color: var(--ink); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; outline: none; }
+    textarea { min-height: 140px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; width: calc(100% - 20px);}
+    button { cursor: pointer; font-weight: 600; letter-spacing: .2px; }
+    button.primary { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #0a0f1e; border: none; }
+    button.ghost { background: transparent; border: 1px dashed rgba(255,255,255,0.2); }
+    .controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .controls + .controls { margin-top: 8px; }
+    .small { font-size: 12px; opacity: 0.85; max-width: 85%;}
+    .canvasWrap { position: relative; height: calc(100% - 56px); }
+    canvas { width: 100%; height: 100%; display: block; border-radius: 14px; }
+    .hud { position: absolute; inset: 8px; pointer-events: none; display:flex; justify-content: space-between; align-items:flex-start; font-size:12px; color:#c7d2fe; text-shadow: 0 1px 2px #000; }
+    .winners { list-style: none; padding: 0; margin: 8px 0 0; max-height: calc(100% - 100px); overflow: auto; }
+    .winners li { background: rgba(124,58,237,0.18); border: 1px solid rgba(167,139,250,0.35); margin: 6px 0; padding: 8px 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .badge { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+    .stat { display:flex; gap:6px; align-items:center; }
+    .right .stat strong { font-size: 18px; }
+    .footerNote { font-size: 11px; opacity: .7; margin-top: 8px; }
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; grid-auto-rows: minmax(220px, auto); }
+      .right { order: 3; }
+      .center { order: 2; min-height: 360px; }
+      .left { order: 1; }
+      .canvasWrap { height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT: Setup -->
+    <section class="panel left">
+      <h2>Participant List</h2>
+      <div class="row">
+        <textarea id="nameInput" placeholder="Enter names separated by commas or new lines. Leave empty to auto-generate (Player 1..80)"></textarea>
+        <div class="controls">
+          <button id="generate" class="ghost">Auto‑Generate</button>
+          <button id="apply" class="primary">Apply Names</button>
+        </div>
+        <div class="controls">
+          <button id="shuffle" class="ghost">Shuffle</button>
+          <label class="small" style="display:flex;align-items:center;gap:6px;">
+            <input id="shuffleOnApply" type="checkbox" checked style="width:auto;"/> Shuffle on apply
+          </label>
+        </div>
+        <div class="controls">
+          <label class="small">Speed
+            <input id="speed" type="range" min="10" max="260" value="120" />
+          </label>
+          <label class="small">Font Size
+            <input id="fontSize" type="range" min="14" max="48" value="24" />
+          </label>
+        </div>
+        <div class="controls">
+          <label class="small">Pick delay (sec)
+            <input id="delayMin" type="number" min="1" max="30" value="5" />
+          </label>
+          <label class="small">to
+            <input id="delayMax" type="number" min="1" max="30" value="10" />
+          </label>
+        </div>
+        <div class="small">Keyboard: <strong>Space</strong> = Start/Stop • <strong>P</strong> = Pick • <strong>↑/↓</strong> = Nudge Plunger</div>
+      </div>
+      <div class="footerNote">Tip: Paste your chat list here, one name per line. Duplicates are auto‑collapsed.</div>
+    </section>
+
+    <!-- CENTER: Canvas -->
+    <section class="panel center">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        Live Picker
+        <span class="small" id="status">ready</span>
+      </h2>
+      <div class="canvasWrap">
+        <canvas id="stage" aria-label="Name Picker Canvas"></canvas>
+        <div class="hud">
+          <div>Plunger selects by row • Scroll runs continuously</div>
+          <div id="hudInfo">0 names</div>
+        </div>
+      </div>
+      <div class="controls" style="margin-top:10px; grid-template-columns: repeat(4, 1fr);">
+        <button id="toggle" class="primary">Start</button>
+        <button id="pick" class="primary">Pick</button>
+        <button id="reset" class="ghost">Reset</button>
+        <button id="clearWinners" class="ghost">Clear Winners</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: Winners -->
+    <section class="panel right">
+      <h2>Winners <span class="badge" id="winnerCount">0</span></h2>
+      <div class="stat"><strong id="lastWinner">—</strong><span class="badge">Last pick</span></div>
+      <ul class="winners" id="winners"></ul>
+    </section>
+  </div>
+
+  <script>
+    // ===== Utility helpers =====
+    function uniqueClean(list) {
+      const seen = new Set();
+      const out = [];
+      for (const raw of list) {
+        const s = String(raw).trim();
+        if (!s) continue;
+        const key = s.toLowerCase();
+        if (!seen.has(key)) { seen.add(key); out.push(s); }
+      }
+      return out;
+    }
+    function genPlayers(n = 80) { return Array.from({length:n}, (_,i)=>`Player ${i+1}`); }
+    function shuffleInPlace(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // ===== Canvas / Scene state =====
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    let running = false;
+    let names = genPlayers();
+    let winners = [];
+
+    let fontSize = 24;           // px (UI controlled)
+    let lineGap = 8;             // px spacing between names
+    let scrollSpeed = 120;       // px/sec (UI controlled)
+    let scrollOffset = 0;        // vertical offset for credit roll
+
+    // Scrolling downwards
+    const SCROLL_DIR = -1; // -1 => visual downward
+
+    // Plunger properties (left side poker)
+    const plunger = { x: 40, y: 120, width: 18, height: 80, tip: 12, vy: 0, auto: true, dir: 1 };
+
+    // Race lights state
+    const lights = {
+        mode: 'idle',      // 'idle'|'countdown'
+        t0: 0,
+        dur: 0,
+        pickAt: null,      // when to pick during Yellow (absolute seconds since t0), or null
+        releaseAt: null,   // when to release follow during Yellow (so it glides past)
+        followIndex: null, // which index we’re visually tracking during Yellow
+        yellowSet: false   // did we already enter Yellow and set follow behavior?
+    };
+
+
+
+    // Animation list for winners flying to the right
+    const flyouts = []; // { name, x, y, t, vx, vy, life }
+
+    // Tap effect when the pointer 'pushes' the chosen name
+    const tap = { active: false, index: null, t: 0, dur: 0.22 };
+
+    // Layout
+    let stage = { w: 800, h: 500, listLeft: 80, listRight: 0, listTop: 0, listBottom: 0, listWidth: 0 };
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      stage.w = Math.max(400, Math.floor(rect.width));
+      stage.h = Math.max(260, Math.floor(rect.height));
+      canvas.width = Math.floor(stage.w * DPR);
+      canvas.height = Math.floor(stage.h * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      stage.listLeft = 80;
+      stage.listRight = stage.w - 40;
+      stage.listTop = 30;
+      stage.listBottom = stage.h - 30;
+      stage.listWidth = stage.listRight - stage.listLeft;
+    }
+    window.addEventListener('resize', resize); resize();
+
+    // ===== UI bindings =====
+    const $ = sel => document.querySelector(sel);
+    const nameInput = $('#nameInput');
+    const hudInfo = $('#hudInfo');
+    const statusEl = $('#status');
+    const winnerCountEl = $('#winnerCount');
+    const winnersEl = $('#winners');
+    const lastWinnerEl = $('#lastWinner');
+
+    $('#generate').addEventListener('click', () => { nameInput.value = genPlayers().join('\n'); });
+
+    $('#apply').addEventListener('click', () => {
+      try {
+        const text = nameInput.value.trim();
+        if (!text) names = genPlayers();
+        else names = uniqueClean(text.split(/\n|,/g));
+        if ($('#shuffleOnApply').checked) shuffleInPlace(names);
+        scrollOffset = 0; winners = []; flyouts.length = 0; renderWinners();
+        toast(`Loaded ${names.length} unique names`);
+      } catch (e) { console.error(e); toast('Failed to parse names. Check your input.', true); }
+    });
+
+    $('#shuffle').addEventListener('click', () => { shuffleInPlace(names); toast('Names shuffled'); });
+
+    $('#speed').addEventListener('input', (e) => { scrollSpeed = Number(e.target.value) || 120; });
+    $('#fontSize').addEventListener('input', (e) => { fontSize = Number(e.target.value) || 24; });
+
+    $('#toggle').addEventListener('click', () => {
+      running = !running;
+      statusEl.textContent = running ? 'rolling' : 'paused';
+      $('#toggle').textContent = running ? 'Pause' : 'Start';
+    });
+
+    $('#pick').addEventListener('click', startCountdownPick);
+    $('#reset').addEventListener('click', () => { scrollOffset = 0; flyouts.length = 0; statusEl.textContent = 'ready'; lights.mode='idle'; });
+    $('#clearWinners').addEventListener('click', () => { winners = []; renderWinners(); lastWinnerEl.textContent = '—'; });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); $('#toggle').click(); }
+      if (e.key.toLowerCase() === 'p') { e.preventDefault(); startCountdownPick(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); plunger.auto = false; plunger.y -= 18; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); plunger.auto = false; plunger.y += 18; }
+    });
+
+    // ===== Drawing helpers =====
+    function drawBackground() {
+      const grd = ctx.createLinearGradient(0, 0, stage.w, stage.h);
+      grd.addColorStop(0, 'rgba(125,211,252,0.08)');
+      grd.addColorStop(1, 'rgba(167,139,250,0.06)');
+      ctx.fillStyle = grd; ctx.fillRect(0, 0, stage.w, stage.h);
+
+      ctx.save();
+      roundRect(stage.listLeft - 12, stage.listTop - 12, stage.listWidth + 24, (stage.listBottom - stage.listTop) + 24, 14);
+      ctx.clip();
+      const pgrd = ctx.createLinearGradient(stage.listLeft, stage.listTop, stage.listRight, stage.listBottom);
+      pgrd.addColorStop(0, 'rgba(255,255,255,0.03)');
+      pgrd.addColorStop(1, 'rgba(255,255,255,0.02)');
+      ctx.fillStyle = pgrd;
+      ctx.fillRect(stage.listLeft - 12, stage.listTop - 12, stage.listWidth + 24, (stage.listBottom - stage.listTop) + 24);
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 2;
+      roundRect(stage.listLeft - 12, stage.listTop - 12, stage.listWidth + 24, (stage.listBottom - stage.listTop) + 24, 14, true);
+    }
+
+    function roundRect(x, y, w, h, r, strokeOnly=false) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      if (strokeOnly) ctx.stroke(); else ctx.fill();
+    }
+
+    function drawPlunger(dt) {
+        const minY = stage.listTop + 10;
+        const maxY = stage.listBottom - plunger.height - 10;
+
+        // Countdown follow logic in Yellow
+        if (lights.mode === 'countdown' && lights.dur > 0) {
+            const t = (performance.now() - lights.t0) / 1000;
+            const d = lights.dur; const redEnd = d * 0.5, yellowEnd = d * 0.85;
+            if (t >= redEnd && t < yellowEnd && lights.followIndex != null) {
+                if (lights.releaseAt != null && t >= lights.releaseAt) {
+                    // Release follow; resume auto glide
+                    plunger.auto = true;
+                } else {
+                    // Actively follow the locked row
+                    const targetY = getRowCenterYForIndex(lights.followIndex);
+                    const targetTop = Math.min(maxY, Math.max(minY, targetY - plunger.height / 2));
+                    plunger.auto = false;
+                    // Critically-damped ease (smooth, no snap)
+                    plunger.y += (targetTop - plunger.y) * Math.min(1, dt * 6);
+                }
+            }
+        }
+
+        if (plunger.auto) {
+            plunger.y += (plunger.dir * (80 * dt));
+            if (plunger.y < minY) { plunger.y = minY; plunger.dir = 1; }
+            if (plunger.y > maxY) { plunger.y = maxY; plunger.dir = -1; }
+        } else {
+            plunger.y = Math.max(minY, Math.min(maxY, plunger.y));
+        }
+
+        // Plunger body
+        const x = plunger.x; const y = plunger.y;
+        ctx.save();
+        ctx.shadowColor = 'rgba(124,58,237,0.8)';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = 'rgba(124,58,237,0.8)';
+        roundRect(x - 6, y - 6, plunger.width + 12, plunger.height + 12, 10);
+        ctx.shadowBlur = 0;
+
+        // inner body
+        ctx.fillStyle = 'rgba(12,18,36,0.95)';
+        roundRect(x, y, plunger.width, plunger.height, 8);
+
+        // Race lights (R, Y, G)
+        drawLights(x - 4, y + 12, plunger.width + 8, plunger.height - 24);
+
+        // tip (poker) with brief stretch on tap
+        const tipX = x + plunger.width; const tipY = y + plunger.height * 0.5;
+        const tipStretch = (tap.active ? (1 + 0.4 * (1 - tap.t / tap.dur)) : 1);
+        ctx.beginPath();
+        ctx.moveTo(tipX,        tipY - 10);
+        ctx.lineTo(tipX + 16*tipStretch, tipY);
+        ctx.lineTo(tipX,        tipY + 10);
+        ctx.closePath();
+        ctx.fillStyle = '#a78bfa'; ctx.fill();
+
+        // marker line
+        ctx.strokeStyle = 'rgba(167,139,250,0.35)'; ctx.setLineDash([6, 6]);
+        ctx.beginPath(); ctx.moveTo(tipX + 2, tipY); ctx.lineTo(stage.listRight - 10, tipY); ctx.stroke(); ctx.setLineDash([]);
+
+        ctx.restore();
+        return { tipX: tipX + 2, tipY };
+    }
+
+
+    function drawLights(x, y, w, h) {
+      const r = Math.min(10, h/8);
+      const gap = (h - r*6)/2;
+      // positions top->bottom: Red, Yellow, Green
+      const centers = [y + r + gap*0.5, y + h/2, y + h - r - gap*0.5];
+      const phases = getLightPhases();
+      const cols = [ '255, 68, 68', '251, 191, 36', '34, 197, 94' ];
+      for (let i=0;i<3;i++) {
+        const active = phases[i]; // 0..1 intensity
+        ctx.save();
+        ctx.beginPath(); ctx.arc(x + w/2, centers[i], r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${cols[i]}, ${0.25 + active*0.55})`;
+        ctx.fill();
+        if (active>0.01) { ctx.shadowColor = `rgba(${cols[i]}, ${0.7*active})`; ctx.shadowBlur = 16*active; ctx.fillStyle = `rgba(${cols[i]}, ${0.7})`; ctx.beginPath(); ctx.arc(x + w/2, centers[i], r*0.7 + r*0.6*active, 0, Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+    }
+
+    function getLightPhases() {
+        // When idle: all lights off
+        if (lights.mode !== 'countdown' || lights.dur <= 0) return [0, 0, 0];
+
+        const t = (performance.now() - lights.t0) / 1000;
+        const d = lights.dur;
+        const redEnd = d * 0.5;
+        const yellowEnd = d * 0.85; // last 15% is green
+
+        // On first entry into Yellow, decide follow/pick behavior
+        if (t >= redEnd && !lights.yellowSet) {
+            lights.yellowSet = true;
+
+            const hit = indexUnderPlunger();
+            lights.followIndex = hit ? hit.index : null;
+
+            const yellowDur = (yellowEnd - redEnd);
+            if (Math.random() < 0.30 && yellowDur > 0.3) {
+                // pick during Yellow, but not too late: ensure >= 1/3 Yellow remains if we skip
+                const latest   = redEnd + yellowDur * (2/3);
+                const earliest = redEnd + yellowDur * 0.15;
+                lights.pickAt  = Math.min(latest, Math.max(earliest, redEnd + Math.random()*(latest - earliest)));
+                lights.releaseAt = null;
+            } else {
+                // skip Yellow: release follow with >= 1/3 Yellow left
+                lights.pickAt    = null;
+                lights.releaseAt = redEnd + yellowDur * (2/3);
+            }
+        }
+
+        // Intensities
+        const red    = clamp01(t < redEnd    ? easeInOut(t / redEnd) : (t < yellowEnd ? 1 : 0));    // bright during Red, then 1 in Yellow, then 0
+        const yellow = clamp01(t < redEnd    ? 0 : (t < yellowEnd ? easePulse((t - redEnd) / (yellowEnd - redEnd)) : 0));
+        const green  = clamp01(t < yellowEnd ? 0 : easeIn((t - yellowEnd) / (d - yellowEnd)));      // 0 until Green truly starts
+
+        return [red, yellow, green];
+    }
+
+
+    function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+    function easeIn(t){ return t*t; }
+    function easeInOut(t){ return t<0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+    function easePulse(t){ return Math.sin(t*Math.PI*3)*0.5+0.5; }
+
+    function drawNames(dt) {
+      const lineHeight = fontSize + lineGap;
+      const visibleRows = Math.ceil((stage.listBottom - stage.listTop) / lineHeight) + 2;
+
+      if (running) scrollOffset += (SCROLL_DIR * scrollSpeed * dt);
+
+      // keep offset in [0, total)
+      const total = (names.length||1) * lineHeight;
+      scrollOffset = ((scrollOffset % total) + total) % total;
+      // advance tap animation
+      if (tap.active) { tap.t += dt; if (tap.t >= tap.dur) tap.active = false; }
+
+      ctx.save(); ctx.beginPath();
+      ctx.rect(stage.listLeft, stage.listTop, stage.listWidth, stage.listBottom - stage.listTop); ctx.clip();
+
+      ctx.font = `600 ${fontSize}px system-ui, -apple-system, Segoe UI, Roboto`;
+      ctx.textBaseline = 'middle';
+
+      const startY = stage.listTop - (scrollOffset % lineHeight);
+      const startIndex = Math.floor(scrollOffset / lineHeight) % (names.length||1);
+
+      for (let i = -1; i < visibleRows; i++) {
+        const idx = (startIndex + i + names.length) % names.length;
+        const y = startY + i * lineHeight + lineHeight * 0.5;
+        const name = names[idx];
+        let xPad = 14 + Math.sin((y + scrollOffset) * 0.01) * 6;
+
+          // Apply tap push to the picked row (brief right shove)
+          if (tap.active && tap.index === idx) {
+              const k = tap.t / tap.dur; // 0..1
+              const overshoot = easeOutBack(1 - Math.min(1, k));
+              xPad += 26 * overshoot;
+          }
+        ctx.globalAlpha = 0.92; ctx.fillStyle = '#e5e7eb';
+        ctx.fillText(name, stage.listLeft + xPad, y);
+        ctx.globalAlpha = 0.08; ctx.strokeStyle = '#fff';
+        ctx.beginPath(); ctx.moveTo(stage.listLeft + 8, y + lineHeight * 0.5 - (lineHeight - fontSize)); ctx.lineTo(stage.listRight - 8, y + lineHeight * 0.5 - (lineHeight - fontSize)); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+      return { lineHeight };
+    }
+
+    function drawFlyouts(dt) {
+      for (let i = flyouts.length - 1; i >= 0; i--) {
+        const f = flyouts[i]; f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt;
+        const life = 1.2; const alpha = Math.max(0, 1 - (f.t / life));
+        ctx.save(); ctx.globalAlpha = alpha; ctx.font = `700 ${fontSize + 8}px system-ui, -apple-system, Segoe UI, Roboto`;
+        ctx.fillStyle = '#fff'; ctx.fillText(f.name, f.x, f.y); ctx.restore();
+        if (f.t >= life) flyouts.splice(i, 1);
+      }
+    }
+
+    function getRowCenterYForIndex(index){
+      // Compute current on-screen Y center for a given name index
+      const lineHeight = fontSize + lineGap;
+      const startY = stage.listTop - (scrollOffset % lineHeight);
+      const startIndex = Math.floor(scrollOffset / lineHeight) % (names.length||1);
+      // find offset rows from startIndex to index in modulo space
+      const delta = (index - startIndex + names.length) % names.length;
+      const y = startY + delta * lineHeight + lineHeight * 0.5;
+      return y;
+    }
+
+    function startCountdownPick() {
+        if (lights.mode === 'countdown') return;
+        if (names.length === 0) { toast('No names left to pick.', true); return; }
+        const min = Math.max(1, Number($('#delayMin').value) || 5);
+        const max = Math.max(min, Number($('#delayMax').value) || 10);
+        lights.mode     = 'countdown';
+        lights.t0       = performance.now();
+        lights.dur      = min + Math.random() * (max - min);
+        lights.pickAt   = null;
+        lights.releaseAt= null;
+        lights.followIndex = null;
+        lights.yellowSet   = false;
+        statusEl.textContent = 'countdown…';
+    }
+
+    function maybeResolvePick() {
+        if (lights.mode !== 'countdown') return;
+        const t = (performance.now() - lights.t0) / 1000;
+        const d = lights.dur;
+        const redEnd = d * 0.5, yellowEnd = d * 0.85;
+
+        // Pick during Yellow if scheduled
+        if (lights.pickAt != null && t >= lights.pickAt && t < yellowEnd) {
+            executePick(); return;
+        }
+        // Otherwise, pick at Green (end of countdown)
+        if (t >= d) { executePick(); return; }
+    }
+
+    function executePick() {
+        const hit = indexUnderPlunger();
+        if (!hit || names.length === 0) { endCountdown(); return; }
+        const idx = hit.index;
+        const name = names[idx];
+
+        // Triangle tap animation on the chosen row
+        tap.active = true; tap.index = idx; tap.t = 0; tap.dur = 0.22;
+
+        // Flyout
+        flyouts.push({ name, x: stage.listLeft + 24, y: hit.y, t: 0, vx: 240, vy: (Math.random()*2-1)*30, life: 1.0 });
+
+        // Record + remove
+        winners.push(name); lastWinnerEl.textContent = name; renderWinners();
+        names.splice(idx, 1);
+        if (names.length === 0) toast('All names picked!');
+        endCountdown();
+    }
+
+    function indexUnderPlunger() {
+        if (!names.length) return null;
+        const lineHeight = fontSize + lineGap;
+        const tipY = plunger.y + plunger.height * 0.5;
+        const startY = stage.listTop - (scrollOffset % lineHeight);
+        const startIndex = Math.floor(scrollOffset / lineHeight) % names.length;
+        const iRow = Math.floor((tipY - startY) / lineHeight);
+        const idx = (startIndex + iRow + names.length) % names.length;
+        const yCenter = startY + iRow * lineHeight + lineHeight * 0.5;
+        return { index: idx, y: yCenter };
+    }
+
+    function easeOutBack(t){
+        const c1 = 1.70158, c3 = c1 + 1;
+        return 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2);
+    }
+
+    function endCountdown() {
+        lights.mode = 'idle';
+        lights.dur = 0;
+        lights.pickAt = null;
+        lights.releaseAt = null;
+        lights.followIndex = null;
+        lights.yellowSet = false;
+        statusEl.textContent = running ? 'rolling' : 'ready';
+        // No jolt; keep everything smooth
+        plunger.auto = true;
+    }
+
+    function renderWinners() {
+      winnerCountEl.textContent = winners.length;
+      winnersEl.innerHTML = '';
+      for (let i = winners.length - 1; i >= 0; i--) {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>${escapeHtml(winners[i])}</span> <span class="badge">#${i+1}</span>`;
+        winnersEl.appendChild(li);
+      }
+      hudInfo.textContent = `${names.length} left`;
+    }
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+
+    // ===== Main loop =====
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.033, (now - last) / 1000); last = now;
+      ctx.clearRect(0, 0, stage.w, stage.h);
+      drawBackground();
+      const { lineHeight } = drawNames(dt);
+      const { tipY } = drawPlunger(dt);
+      drawFlyouts(dt);
+
+      // Highlight the active row under the plunger tip
+      ctx.save(); ctx.globalAlpha = 0.08; ctx.fillStyle = '#fff';
+      const startY = stage.listTop - (scrollOffset % lineHeight);
+      const iRow = Math.floor((tipY - startY) / lineHeight);
+      const rowY = startY + iRow * lineHeight;
+      ctx.fillRect(stage.listLeft, rowY, stage.listWidth, lineHeight); ctx.restore();
+
+      // Resolve pick if countdown reached
+      maybeResolvePick();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // ===== Toast notifications (lightweight) =====
+    let toastTimer = null;
+    function toast(msg, isError=false) {
+      statusEl.textContent = msg; statusEl.style.color = isError ? '#fca5a5' : '#d1fae5';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { statusEl.textContent = running ? 'rolling' : 'ready'; statusEl.style.color = ''; }, 1800);
+    }
+
+    // Init winners and hud
+    renderWinners();
+  </script>
+</body>
+</html>
