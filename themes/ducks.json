@@ -1,0 +1,15 @@
+{
+  "name": "ducks",
+  "label": "Tidal Duck Pond",
+  "extends": "ducks",
+  "css": {
+    "--accent": "#22d3ee"
+  },
+  "racers": {
+    "placeholders": {
+      "roll": "🟢",
+      "floaty": "🦆",
+      "wheelie": "🛶"
+    }
+  }
+} 

@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "title": "Giveaway Grand Prix",
+  "duration": 35,
+  "finishPct": 12,
+  "chaos": 0.6,
+  "rubberBand": 0.7,
+  "leadPhases": 3,
+  "theme": "cars",
+  "fxMode": "wheelie",
+  "players": [
+    { "name": "Alice", "motion": "wheelie", "avatar": "🚗" },
+    { "name": "Bob", "motion": "wheelie", "avatar": "🚙" },
+    { "name": "Charlie", "motion": "wheelie", "avatar": "🚕" }
+  ]
+}

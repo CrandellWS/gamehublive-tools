@@ -1,0 +1,15 @@
+{
+  "name": "cars",
+  "label": "Neon Speedway (Cars)",
+  "extends": "cars",
+  "css": {
+    "--accent": "#f97316"
+  },
+  "racers": {
+    "placeholders": {
+      "roll": "🚗",
+      "floaty": "🚙",
+      "wheelie": "🏎️"
+    }
+  }
+}

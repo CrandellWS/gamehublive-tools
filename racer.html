@@ -7,12 +7,22 @@
     <style>
         :root {
             --bg: #0b1220;
+            --bg-gradient: linear-gradient(180deg, #0b1220 0%, #0e1a35 100%);
             --panel: #0f172a;
             --text: #e5e7eb;
             --muted: #94a3b8;
             --accent: #7c3aed;
             --danger: #ef4444;
             --border: #22304b;
+            --track-bg: #0c1834;
+            --track-border: #1e2a44;
+            --lane-bg: rgba(255, 255, 255, .05);
+            --lane-border: #22304b;
+            --lane-stripe-primary: rgba(255, 255, 255, .15);
+            --lane-stripe-secondary: rgba(255, 255, 255, .08);
+            --lane-stripe-width: 2px;
+            --lane-stripe-gap: 20px;
+            --lane-stripe-row: 16px;
             --lane-gap: 8px;
             --lane-height: 10vh;
             --racer-size: 7vh;
@@ -34,7 +44,7 @@
             margin: 0;
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
             color: var(--text);
-            background: linear-gradient(180deg, #0b1220 0%, #0e1a35 100%);
+            background: var(--bg-gradient);
         }
 
         /* Layout */
@@ -136,9 +146,9 @@
             width: min(1800px, 96vw); /* better on 4K, still scales down nicely */
             height: auto;
             padding: 14px;
-            border: 1px solid #1e2a44;
+            border: 1px solid var(--track-border);
             border-radius: 16px;
-            background: #0c1834;
+            background: var(--track-bg);
             overflow: hidden;
             box-shadow: 0 10px 40px rgba(0, 0, 0, .25);
             margin: 0; /* prevent extra gap around track */
@@ -160,8 +170,8 @@
             position: relative;
             height: var(--lane-height);
             margin-bottom: var(--lane-gap);
-            background: rgba(255, 255, 255, .05);
-            border: 1px solid #22304b;
+            background: var(--lane-bg);
+            border: 1px solid var(--lane-border);
             border-radius: 12px;
             overflow: hidden;
             display: flex;
@@ -174,16 +184,21 @@
             inset: 0;
             pointer-events: none;
             opacity: .4;
-            background: linear-gradient(90deg, rgba(255, 255, 255, .15) 0 2px, transparent 2px 22px),
-            linear-gradient(180deg, rgba(255, 255, 255, .08) 0 50%, transparent 50% 100%);
-            background-size: 22px 100%, 100% 16px;
+            background: linear-gradient(90deg,
+                    var(--lane-stripe-primary) 0 var(--lane-stripe-width),
+                    transparent var(--lane-stripe-width) calc(var(--lane-stripe-width) + var(--lane-stripe-gap))),
+                linear-gradient(180deg,
+                    var(--lane-stripe-secondary) 0 50%,
+                    transparent 50% 100%);
+            background-size: calc(var(--lane-stripe-width) + var(--lane-stripe-gap)) 100%,
+                100% var(--lane-stripe-row);
             animation: scrollBg 1.2s linear infinite;
         }
 
         @keyframes scrollBg {
             to {
-                background-position-x: -22px, 0;
-                background-position-y: 0, 16px;
+                background-position-x: calc(-1 * (var(--lane-stripe-width) + var(--lane-stripe-gap))), 0;
+                background-position-y: 0, var(--lane-stripe-row);
             }
         }
 
@@ -484,6 +499,10 @@
                     </select>
                 </div>
                 <div class="field">
+                    <label for="inpTheme">Theme</label>
+                    <select id="inpTheme"></select>
+                </div>
+                <div class="field">
                     <label for="inpLeadPhases">Lead changes (phases)</label>
                     <input id="inpLeadPhases" type="number" min="1" max="10" step="1" value="3"/>
                 </div>
@@ -577,6 +596,6 @@
 
 </div>
 
-<script src="js/racer.js?v17"></script>
+<script src="js/racer.js?v18"></script>
 </body>
 </html>

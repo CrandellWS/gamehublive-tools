@@ -1,3 +1,165 @@
+// ===== Themes & configuration =====
+const DEFAULT_EMOTES = ['🦆', '🏎️', '🟣', '🚀', '🐢'];
+
+const THEME_PRESETS = {
+    'stream-default': {
+        label: 'Stream Default',
+        css: {
+            '--bg': '#0b1220',
+            '--bg-gradient': 'linear-gradient(180deg, #0b1220 0%, #0e1a35 100%)',
+            '--panel': '#0f172a',
+            '--text': '#e5e7eb',
+            '--muted': '#94a3b8',
+            '--accent': '#7c3aed',
+            '--danger': '#ef4444',
+            '--border': '#22304b',
+            '--track-bg': '#0c1834',
+            '--track-border': '#1e2a44',
+            '--lane-bg': 'rgba(255, 255, 255, .05)',
+            '--lane-border': '#22304b',
+            '--lane-stripe-primary': 'rgba(255, 255, 255, .15)',
+            '--lane-stripe-secondary': 'rgba(255, 255, 255, .08)',
+            '--lane-stripe-width': '2px',
+            '--lane-stripe-gap': '20px',
+            '--lane-stripe-row': '16px'
+        },
+        lane: {
+            background: 'rgba(255, 255, 255, .05)',
+            border: '#22304b',
+            stripePrimary: 'rgba(255, 255, 255, .15)',
+            stripeSecondary: 'rgba(255, 255, 255, .08)',
+            stripeWidth: '2px',
+            stripeGap: '20px',
+            stripeRow: '16px'
+        },
+        racers: {
+            placeholders: { roll: '🟣', floaty: '🦆', wheelie: '🏎️' },
+            emotes: DEFAULT_EMOTES
+        },
+        fxAll: 'off'
+    },
+    'cars': {
+        label: 'Neon Speedway (Cars)',
+        css: {
+            '--bg': '#0d0b1f',
+            '--bg-gradient': 'linear-gradient(180deg, #0d0b1f 0%, #1f0b3d 100%)',
+            '--panel': '#110b2a',
+            '--text': '#f8fafc',
+            '--muted': '#cbd5f5',
+            '--accent': '#f97316',
+            '--danger': '#f43f5e',
+            '--border': '#3b1965',
+            '--track-bg': '#140b33',
+            '--track-border': '#3b1965',
+            '--lane-bg': 'rgba(249, 115, 22, 0.14)',
+            '--lane-border': '#f97316',
+            '--lane-stripe-primary': 'rgba(249, 115, 22, 0.7)',
+            '--lane-stripe-secondary': 'rgba(249, 115, 22, 0.24)',
+            '--lane-stripe-width': '3px',
+            '--lane-stripe-gap': '26px',
+            '--lane-stripe-row': '18px'
+        },
+        lane: {
+            background: 'rgba(249, 115, 22, 0.14)',
+            border: '#f97316',
+            stripePrimary: 'rgba(249, 115, 22, 0.7)',
+            stripeSecondary: 'rgba(249, 115, 22, 0.24)',
+            stripeWidth: '3px',
+            stripeGap: '26px',
+            stripeRow: '18px'
+        },
+        racers: {
+            placeholders: { roll: '🚗', floaty: '🚙', wheelie: '🏎️' },
+            emotes: ['🏎️', '🚗', '🚙', '🚕', '🚘']
+        },
+        fxAll: 'wheelie'
+    },
+    'ducks': {
+        label: 'Tidal Duck Pond',
+        css: {
+            '--bg': '#022c22',
+            '--bg-gradient': 'linear-gradient(180deg, #022c22 0%, #0b5d69 100%)',
+            '--panel': '#064e3b',
+            '--text': '#ecfeff',
+            '--muted': '#bae6fd',
+            '--accent': '#22d3ee',
+            '--danger': '#f97316',
+            '--border': '#0f766e',
+            '--track-bg': '#0f766e',
+            '--track-border': '#0ea5e9',
+            '--lane-bg': 'rgba(34, 211, 238, 0.18)',
+            '--lane-border': '#0ea5e9',
+            '--lane-stripe-primary': 'rgba(255, 255, 255, 0.35)',
+            '--lane-stripe-secondary': 'rgba(14, 165, 233, 0.42)',
+            '--lane-stripe-width': '2px',
+            '--lane-stripe-gap': '18px',
+            '--lane-stripe-row': '20px'
+        },
+        lane: {
+            background: 'rgba(34, 211, 238, 0.18)',
+            border: '#0ea5e9',
+            stripePrimary: 'rgba(255, 255, 255, 0.35)',
+            stripeSecondary: 'rgba(14, 165, 233, 0.42)',
+            stripeWidth: '2px',
+            stripeGap: '18px',
+            stripeRow: '20px'
+        },
+        racers: {
+            placeholders: { roll: '🟢', floaty: '🦆', wheelie: '🛶' },
+            emotes: ['🦆', '🐤', '🦢', '🪿', '🐥']
+        },
+        fxAll: 'floaty'
+    },
+    'marbles': {
+        label: 'Galaxy Marbles',
+        css: {
+            '--bg': '#0b1120',
+            '--bg-gradient': 'linear-gradient(180deg, #0b1120 0%, #111827 100%)',
+            '--panel': '#111827',
+            '--text': '#e0f2fe',
+            '--muted': '#a5b4fc',
+            '--accent': '#60a5fa',
+            '--danger': '#f87171',
+            '--border': '#1f2937',
+            '--track-bg': '#0f172a',
+            '--track-border': '#2563eb',
+            '--lane-bg': 'rgba(96, 165, 250, 0.18)',
+            '--lane-border': '#2563eb',
+            '--lane-stripe-primary': 'rgba(96, 165, 250, 0.55)',
+            '--lane-stripe-secondary': 'rgba(59, 130, 246, 0.32)',
+            '--lane-stripe-width': '2px',
+            '--lane-stripe-gap': '22px',
+            '--lane-stripe-row': '18px'
+        },
+        lane: {
+            background: 'rgba(96, 165, 250, 0.18)',
+            border: '#2563eb',
+            stripePrimary: 'rgba(96, 165, 250, 0.55)',
+            stripeSecondary: 'rgba(59, 130, 246, 0.32)',
+            stripeWidth: '2px',
+            stripeGap: '22px',
+            stripeRow: '18px'
+        },
+        racers: {
+            placeholders: { roll: '🔮', floaty: '🪐', wheelie: '🚀' },
+            emotes: ['🔮', '🪐', '🌌', '🌠', '💫']
+        },
+        fxAll: 'roll'
+    }
+};
+
+const DEFAULT_THEME_NAME = 'stream-default';
+
+const RACER_EVENTS = createEventHub();
+const emitEvent = RACER_EVENTS.emit;
+
+// Expose subscription helpers immediately so overlays can listen ASAP
+window.RacerEvents = {
+    on: RACER_EVENTS.on,
+    off: RACER_EVENTS.off,
+    once: RACER_EVENTS.once
+};
+
 // ===== State =====
 const state = {
     settings: {
@@ -9,24 +171,27 @@ const state = {
         rubber: 0.7,
         fxAll: 'off',   // 'off' | 'roll' | 'floaty' | 'wheelie'
         leadPhases: 3,
+        theme: DEFAULT_THEME_NAME,
+        themeConfig: null,
         // banners
         bannerTopUrl: '', bannerTopH: 10,
         bannerBotUrl: '', bannerBotH: 10,
         // avatar pool
         pool: {
             mode: 'emotes',          // 'emotes' | 'images'
-            emotes: ['🦆', '🏎️', '🟣', '🚀', '🐢'],
+            emotes: THEME_PRESETS[DEFAULT_THEME_NAME].racers.emotes.slice(),
             images: []               // object URLs (not exported)
         }
     },
+    theme: resolveTheme(DEFAULT_THEME_NAME),
     players: [
-        {id: uid(), name: 'Player 1', motion: 'roll', imgUrl: ''},
-        {id: uid(), name: 'Player 2', motion: 'floaty', imgUrl: ''},
-        {id: uid(), name: 'Player 3', motion: 'wheelie', imgUrl: ''},
-        {id: uid(), name: 'Player 4', motion: 'roll', imgUrl: ''},
-        {id: uid(), name: 'Player 5', motion: 'floaty', imgUrl: ''}
+        {id: uid(), name: 'Player 1', motion: 'roll', imgUrl: '', avatarEmoji: ''},
+        {id: uid(), name: 'Player 2', motion: 'floaty', imgUrl: '', avatarEmoji: ''},
+        {id: uid(), name: 'Player 3', motion: 'wheelie', imgUrl: '', avatarEmoji: ''},
+        {id: uid(), name: 'Player 4', motion: 'roll', imgUrl: '', avatarEmoji: ''},
+        {id: uid(), name: 'Player 5', motion: 'floaty', imgUrl: '', avatarEmoji: ''}
     ],
-    race: {running: false, rafId: 0, racers: [], phases: [], startTs: 0, winner: null}
+    race: {running: false, rafId: 0, racers: [], phases: [], startTs: 0, winner: null, lastLeaderId: null}
 };
 
 // ===== DOM =====
@@ -52,6 +217,7 @@ const inpChaos = document.getElementById('inpChaos');
 const inpRubber = document.getElementById('inpRubber');
 const inpFxAll = document.getElementById('inpFxAll');
 const inpLeadPhases = document.getElementById('inpLeadPhases');
+const inpTheme = document.getElementById('inpTheme');
 
 const inpBannerTop = document.getElementById('inpBannerTop');
 const inpTopH = document.getElementById('inpTopH');
@@ -92,7 +258,8 @@ btnLoadNames.onclick = () => {
         id: uid(),
         name: n,
         motion: ['roll', 'floaty', 'wheelie'][i % 3],
-        imgUrl: ''
+        imgUrl: '',
+        avatarEmoji: ''
     }));
     renderPlayerRows();
     layoutTrack();
@@ -105,7 +272,7 @@ btnCopyNames.onclick = async () => {
 
 // Players
 btnAddPlayer.onclick = () => {
-    state.players.push({id: uid(), name: `Player ${state.players.length + 1}`, motion: 'roll', imgUrl: ''});
+    state.players.push({id: uid(), name: `Player ${state.players.length + 1}`, motion: 'roll', imgUrl: '', avatarEmoji: ''});
     renderPlayerRows();
     layoutTrack();
 };
@@ -119,22 +286,7 @@ btnClearPlayers.onclick = () => {
 
 // Config export/import (NO images in file)
 btnExportConfig.onclick = () => {
-    const cfg = {
-        version: 1,
-        settings: {
-            title: state.settings.title,
-            durationSec: state.settings.durationSec,
-            finishPctFromRight: state.settings.finishPctFromRight,
-            chaos: state.settings.chaos,
-            rubber: state.settings.rubber,
-            fxAll: state.settings.fxAll,
-            leadPhases: state.settings.leadPhases,
-            bannerTopH: state.settings.bannerTopH,
-            bannerBotH: state.settings.bannerBotH,
-            pool: {mode: state.settings.pool.mode, emotes: state.settings.pool.emotes.slice()} // images intentionally omitted
-        },
-        players: state.players.map(p => ({name: p.name, motion: p.motion})) // no imgUrl
-    };
+    const cfg = createConfigSnapshot();
     downloadJson('race-config.json', cfg);
 };
 
@@ -166,22 +318,315 @@ function safeJSON(text) {
     return JSON.parse(clean);
 }
 
+function mergeThemeSections(base = {}, override = {}) {
+    const result = {...(base || {})};
+    if (!override) return result;
+    for (const [key, value] of Object.entries(override)) {
+        if (value === undefined) continue;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            result[key] = mergeThemeSections(result[key] || {}, value);
+        } else if (Array.isArray(value)) {
+            result[key] = value.slice();
+        } else {
+            result[key] = value;
+        }
+    }
+    return result;
+}
+
+function resolveTheme(themeValue) {
+    let descriptor = null;
+    let baseKey = DEFAULT_THEME_NAME;
+    if (typeof themeValue === 'string' && themeValue) {
+        baseKey = themeValue;
+    } else if (themeValue && typeof themeValue === 'object') {
+        descriptor = themeValue;
+        baseKey = themeValue.extends || themeValue.base || themeValue.name || baseKey;
+    }
+    if (!THEME_PRESETS[baseKey]) baseKey = DEFAULT_THEME_NAME;
+    const base = THEME_PRESETS[baseKey];
+    const resolved = {
+        name: (descriptor && descriptor.name) || (typeof themeValue === 'string' ? themeValue : baseKey),
+        label: descriptor?.label || base.label || baseKey,
+        css: mergeThemeSections(base.css, descriptor?.css),
+        lane: mergeThemeSections(base.lane, descriptor?.lane),
+        racers: mergeThemeSections(base.racers, descriptor?.racers),
+        fxAll: descriptor?.fxAll ?? base.fxAll ?? 'off'
+    };
+    if (!resolved.name) resolved.name = baseKey;
+    return resolved;
+}
+
+function applyTheme(themeValue, options = {}) {
+    const { persist = true, allowAvatarReset = false } = options;
+    const descriptor = themeValue ?? state.settings.themeConfig ?? state.settings.theme;
+    const resolved = resolveTheme(descriptor);
+    state.theme = resolved;
+
+    if (persist) {
+        if (typeof themeValue === 'object' && themeValue !== null) {
+            state.settings.themeConfig = themeValue;
+            state.settings.theme = resolved.name || state.settings.theme;
+        } else if (typeof themeValue === 'string') {
+            state.settings.theme = themeValue;
+            state.settings.themeConfig = null;
+        } else if (!state.settings.theme) {
+            state.settings.theme = resolved.name || DEFAULT_THEME_NAME;
+        }
+    }
+
+    const root = document.documentElement;
+    if (resolved.name) root.dataset.theme = resolved.name;
+    for (const [key, value] of Object.entries(resolved.css || {})) {
+        if (value == null) continue;
+        root.style.setProperty(key, value);
+    }
+
+    ensureThemeOption(state.settings.theme, resolved.label || state.settings.theme);
+    if (inpTheme) inpTheme.value = state.settings.theme;
+
+    if (allowAvatarReset && state.settings.pool.mode === 'emotes') {
+        state.settings.pool.emotes = getThemeFallbackEmotes(resolved).slice();
+    }
+
+    return resolved;
+}
+
+function snapshotSettings() {
+    const { title, durationSec, finishPctFromRight, chaos, rubber, fxAll, leadPhases, theme } = state.settings;
+    return {
+        title,
+        durationSec,
+        finishPctFromRight,
+        chaos,
+        rubber,
+        fxAll,
+        leadPhases,
+        theme,
+        themeLabel: state.theme?.label || theme
+    };
+}
+
+function snapshotPlayers(players = state.players) {
+    return players.map(p => ({
+        id: p.id,
+        name: p.name,
+        motion: p.motion,
+        avatarUrl: p.imgUrl,
+        avatarEmoji: p.avatarEmoji || null
+    }));
+}
+
+function createConfigSnapshot() {
+    const cfg = {
+        version: 2,
+        title: state.settings.title,
+        duration: state.settings.durationSec,
+        durationSec: state.settings.durationSec,
+        finishPct: state.settings.finishPctFromRight,
+        finishPctFromRight: state.settings.finishPctFromRight,
+        chaos: state.settings.chaos,
+        rubberBand: state.settings.rubber,
+        leadPhases: state.settings.leadPhases,
+        theme: state.settings.theme,
+        fxMode: state.settings.fxAll,
+        players: state.players.map(p => {
+            const entry = { name: p.name, motion: p.motion };
+            if (p.avatarEmoji) entry.avatar = p.avatarEmoji;
+            if (p.imgUrl && !p.imgUrl.startsWith('data:')) entry.avatarUrl = p.imgUrl;
+            return entry;
+        }),
+        settings: {
+            title: state.settings.title,
+            durationSec: state.settings.durationSec,
+            finishPctFromRight: state.settings.finishPctFromRight,
+            chaos: state.settings.chaos,
+            rubber: state.settings.rubber,
+            fxAll: state.settings.fxAll,
+            leadPhases: state.settings.leadPhases,
+            theme: state.settings.theme,
+            bannerTopH: state.settings.bannerTopH,
+            bannerBotH: state.settings.bannerBotH,
+            pool: { mode: state.settings.pool.mode, emotes: state.settings.pool.emotes.slice() }
+        }
+    };
+    if (state.settings.themeConfig) cfg.themeConfig = state.settings.themeConfig;
+    return cfg;
+}
+
+function normalizeIncomingConfig(raw) {
+    if (!raw || typeof raw !== 'object') return { settings: {}, players: [] };
+    if (raw.settings && typeof raw.settings === 'object') {
+        return {
+            version: raw.version,
+            settings: {...raw.settings},
+            players: Array.isArray(raw.players) ? raw.players.slice() : [],
+            theme: raw.theme ?? raw.settings.theme ?? null,
+            themeConfig: raw.themeConfig ?? raw.settings.themeConfig ?? null
+        };
+    }
+    const settings = {};
+    if ('title' in raw) settings.title = raw.title;
+    if ('duration' in raw) settings.durationSec = raw.duration;
+    if ('durationSec' in raw) settings.durationSec = raw.durationSec;
+    if ('finishPct' in raw) settings.finishPctFromRight = raw.finishPct;
+    if ('finishPctFromRight' in raw) settings.finishPctFromRight = raw.finishPctFromRight;
+    if ('chaos' in raw) settings.chaos = raw.chaos;
+    if ('chaosLevel' in raw) settings.chaos = raw.chaosLevel;
+    if ('randomness' in raw) settings.chaos = raw.randomness;
+    if ('rubberBand' in raw) settings.rubber = raw.rubberBand;
+    if ('rubber' in raw) settings.rubber = raw.rubber;
+    if ('catchUp' in raw) settings.rubber = raw.catchUp;
+    if ('leadPhases' in raw) settings.leadPhases = raw.leadPhases;
+    if ('leadPhaseCount' in raw) settings.leadPhases = raw.leadPhaseCount;
+    if ('fxMode' in raw) settings.fxAll = raw.fxMode;
+    if ('fxAll' in raw) settings.fxAll = raw.fxAll;
+    if ('bannerTopH' in raw) settings.bannerTopH = raw.bannerTopH;
+    if ('bannerBotH' in raw) settings.bannerBotH = raw.bannerBotH;
+    if ('pool' in raw) settings.pool = raw.pool;
+    if ('logoUrl' in raw) settings.logoUrl = raw.logoUrl;
+    if ('bannerTopUrl' in raw) settings.bannerTopUrl = raw.bannerTopUrl;
+    if ('bannerBotUrl' in raw) settings.bannerBotUrl = raw.bannerBotUrl;
+    return {
+        version: raw.version,
+        settings,
+        players: Array.isArray(raw.players) ? raw.players.slice() : [],
+        theme: raw.theme ?? raw.themeName ?? raw.themeSlug ?? null,
+        themeConfig: raw.themeConfig ?? null
+    };
+}
+
+function mapIncomingPlayer(p, idx = 0) {
+    const name = (p && typeof p.name === 'string' && p.name.trim()) ? p.name.trim() : `Player ${idx + 1}`;
+    const motion = (p && typeof p.motion === 'string' && ['roll', 'floaty', 'wheelie'].includes(p.motion)) ? p.motion : 'roll';
+    const emojiCandidates = [p?.avatarEmoji, p?.avatar, p?.emoji, p?.icon, p?.initial];
+    const urlCandidates = [p?.avatarUrl, p?.imageUrl, p?.img, p?.imgUrl, p?.avatarSrc];
+    let avatarEmoji = '';
+    let imgUrl = '';
+
+    for (const candidate of emojiCandidates) {
+        if (typeof candidate === 'string' && candidate.trim()) {
+            avatarEmoji = candidate.trim();
+            imgUrl = emojiToDataURL(avatarEmoji);
+            break;
+        }
+    }
+    if (!imgUrl) {
+        for (const candidate of urlCandidates) {
+            if (typeof candidate === 'string' && candidate.trim()) {
+                imgUrl = candidate.trim();
+                break;
+            }
+        }
+    }
+    if (!imgUrl && typeof p?.avatar === 'string' && p.avatar.trim()) {
+        const val = p.avatar.trim();
+        if (/^(https?:|data:|blob:)/.test(val)) {
+            imgUrl = val;
+        } else {
+            avatarEmoji = val;
+            imgUrl = emojiToDataURL(val);
+        }
+    }
+    if (!imgUrl && typeof p?.imgUrl === 'string' && p.imgUrl.trim()) {
+        imgUrl = p.imgUrl.trim();
+    }
+
+    return { id: uid(), name, motion, imgUrl, avatarEmoji };
+}
+
+function applyNormalizedConfig(cfg, options = {}) {
+    const { allowAvatarReset = false, fillMissingAvatars = true } = options;
+    const s = cfg.settings || {};
+
+    if ('title' in s && typeof s.title === 'string') state.settings.title = s.title.slice(0, 120);
+    if ('durationSec' in s) state.settings.durationSec = clamp(num(s.durationSec, state.settings.durationSec), 5, 600);
+    if ('finishPctFromRight' in s) state.settings.finishPctFromRight = clamp(num(s.finishPctFromRight, state.settings.finishPctFromRight), 2, 30);
+    if ('chaos' in s) state.settings.chaos = clamp(parseFloat(s.chaos), 0, 1) || state.settings.chaos;
+    if ('rubber' in s) state.settings.rubber = clamp(parseFloat(s.rubber), 0, 1) || state.settings.rubber;
+    if ('fxAll' in s && typeof s.fxAll === 'string') state.settings.fxAll = s.fxAll;
+    if ('leadPhases' in s) state.settings.leadPhases = clamp(num(s.leadPhases, state.settings.leadPhases), 1, 10);
+    if ('bannerTopH' in s) state.settings.bannerTopH = clamp(num(s.bannerTopH, state.settings.bannerTopH), 0, 40);
+    if ('bannerBotH' in s) state.settings.bannerBotH = clamp(num(s.bannerBotH, state.settings.bannerBotH), 0, 40);
+    if ('logoUrl' in s && typeof s.logoUrl === 'string') state.settings.logoUrl = s.logoUrl;
+    if ('bannerTopUrl' in s && typeof s.bannerTopUrl === 'string') state.settings.bannerTopUrl = s.bannerTopUrl;
+    if ('bannerBotUrl' in s && typeof s.bannerBotUrl === 'string') state.settings.bannerBotUrl = s.bannerBotUrl;
+    if (s.pool) {
+        const pool = s.pool;
+        state.settings.pool.mode = pool.mode ?? state.settings.pool.mode ?? 'emotes';
+        if (Array.isArray(pool.emotes) && pool.emotes.length) {
+            state.settings.pool.emotes = pool.emotes.slice();
+        }
+    }
+
+    const themeDescriptor = cfg.themeConfig || cfg.theme || state.settings.theme;
+    applyTheme(themeDescriptor, { persist: true, allowAvatarReset });
+    if (state.settings.pool.mode === 'emotes' && !state.settings.pool.emotes.length) {
+        state.settings.pool.emotes = getThemeFallbackEmotes().slice();
+    }
+
+    if (Array.isArray(cfg.players) && cfg.players.length) {
+        state.players = cfg.players.map((p, idx) => mapIncomingPlayer(p, idx));
+    }
+
+    if (fillMissingAvatars) randomAssignFromPool(false);
+
+    applyHeader();
+    renderPlayerRows();
+    layoutTrack();
+    applyBanners();
+    syncSettingsFormFromState();
+    setViewportVars();
+}
+
+function loadConfig(cfg, options = {}) {
+    const normalized = normalizeIncomingConfig(cfg);
+    const { errors, warnings } = validateConfigShape(normalized);
+    if (errors.length) {
+        const err = new Error('Invalid race configuration');
+        err.validationErrors = errors;
+        err.validationWarnings = warnings;
+        throw err;
+    }
+    applyNormalizedConfig(normalized, options);
+    if (!options.skipEmit) {
+        emitEvent('config:loaded', {
+            settings: snapshotSettings(),
+            players: snapshotPlayers(),
+            warnings
+        });
+    }
+    return { warnings, settings: snapshotSettings(), players: snapshotPlayers() };
+}
+
+window.loadRaceConfig = loadConfig;
+window.getRaceConfigSnapshot = createConfigSnapshot;
+
 function validateConfigShape(cfg) {
     const errors = [], warnings = [];
-    if (!cfg || typeof cfg !== 'object') errors.push('Top-level is not an object.');
-    if (!cfg.settings || typeof cfg.settings !== 'object') errors.push('Missing "settings" object.');
-    if (!('players' in cfg)) errors.push('Missing "players" property.');
-    if (cfg.players && !Array.isArray(cfg.players)) errors.push('"players" is not an array.');
-    if (Array.isArray(cfg.players)) {
-        const bad = cfg.players.filter(p => !p || typeof p !== 'object');
-        if (bad.length) errors.push(`${bad.length} player entries are not objects.`);
-        const unnamed = cfg.players.filter(p => !p || typeof p.name !== 'string');
-        if (unnamed.length) warnings.push(`${unnamed.length} players missing valid "name" — will auto-name.`);
+    if (!cfg || typeof cfg !== 'object') {
+        errors.push('Configuration is not an object.');
+        return { errors, warnings };
     }
-    // settings checks (non-fatal -> warnings)
-    if (cfg.settings && typeof cfg.settings.durationSec !== 'number') warnings.push('settings.durationSec is not a number (will default).');
-    if (cfg.settings && typeof cfg.settings.finishPctFromRight !== 'number') warnings.push('settings.finishPctFromRight is not a number (will default).');
-    return {errors, warnings};
+    if (!cfg.settings || typeof cfg.settings !== 'object') errors.push('Missing "settings" object.');
+    if (!Array.isArray(cfg.players)) errors.push('"players" must be an array.');
+    if (Array.isArray(cfg.players)) {
+        cfg.players.forEach((p, idx) => {
+            if (!p || typeof p !== 'object') {
+                errors.push(`Player #${idx + 1} is not an object.`);
+                return;
+            }
+            if (typeof p.name !== 'string' || !p.name.trim()) {
+                warnings.push(`Player #${idx + 1} missing valid name — will auto-name.`);
+            }
+        });
+    }
+    const s = cfg.settings || {};
+    if ('durationSec' in s && !Number.isFinite(Number(s.durationSec))) warnings.push('settings.durationSec is not numeric (will default).');
+    if ('finishPctFromRight' in s && !Number.isFinite(Number(s.finishPctFromRight))) warnings.push('settings.finishPctFromRight is not numeric (will default).');
+    if ('chaos' in s && !Number.isFinite(Number(s.chaos))) warnings.push('settings.chaos is not numeric (will default).');
+    if ('rubber' in s && !Number.isFinite(Number(s.rubber))) warnings.push('settings.rubber is not numeric (will default).');
+    return { errors, warnings };
 }
 
 
@@ -205,62 +650,22 @@ inpImportConfig.onchange = async (e) => {
             DBG(raw.slice(0, 200));
         });
 
-        let cfg;
         try {
-            cfg = safeJSON(raw);
+            const cfg = safeJSON(raw);
+            const { warnings } = loadConfig(cfg, { allowAvatarReset: true });
+            const t1 = performance.now();
+            toast(`Config loaded (${state.players.length} players) in ${(t1 - t0).toFixed(1)} ms`);
+            if (warnings.length) console.warn('[Import] Warnings:', warnings);
         } catch (parseErr) {
-            console.error('[Import] JSON parse error:', parseErr);
-            alert('Could not parse JSON. See console for details.');
+            if (parseErr?.validationErrors) {
+                console.error('[Import] Validation errors:', parseErr.validationErrors);
+                alert(`Import failed:\n${parseErr.validationErrors.join('\n')}`);
+            } else {
+                console.error('[Import] JSON parse error:', parseErr);
+                alert('Could not parse JSON. See console for details.');
+            }
             return;
         }
-
-        // Validate + log omitted for brevity…
-
-        // Apply settings
-        const s = cfg.settings || {};
-        state.settings.title = s.title ?? state.settings.title;
-        state.settings.durationSec = num(s.durationSec, state.settings.durationSec);
-        state.settings.finishPctFromRight = num(s.finishPctFromRight, state.settings.finishPctFromRight);
-        state.settings.chaos = num(s.chaos, state.settings.chaos);
-        state.settings.rubber = num(s.rubber, state.settings.rubber);
-        state.settings.fxAll = s.fxAll ?? state.settings.fxAll;
-        state.settings.leadPhases = num(s.leadPhases, state.settings.leadPhases);
-        state.settings.bannerTopH = num(s.bannerTopH, state.settings.bannerTopH);
-        state.settings.bannerBotH = num(s.bannerBotH, state.settings.bannerBotH);
-
-        if (s.pool) {
-            state.settings.pool.mode = s.pool.mode ?? state.settings.pool.mode ?? 'emotes';
-            state.settings.pool.emotes = Array.isArray(s.pool.emotes) && s.pool.emotes.length
-                ? s.pool.emotes.slice()
-                : ['🦆', '🏎️', '🟣', '🚀', '🐢'];
-        }
-
-        // Apply players
-        const importedPlayers = Array.isArray(cfg.players) ? cfg.players : [];
-        state.players = importedPlayers.map((p, i) => ({
-            id: uid(),
-            name: (p && typeof p.name === 'string' && p.name.trim()) ? p.name.trim() : `Player ${i + 1}`,
-            motion: (p && typeof p.motion === 'string' && ['roll', 'floaty', 'wheelie'].includes(p.motion)) ? p.motion : 'roll',
-            imgUrl: ''
-        }));
-
-        // Assign avatars from current pool
-        randomAssignFromPool(true);
-
-        // 🔽🔽🔽 EXACTLY HERE — keep inputs in sync if modal is open 🔽🔽🔽
-        syncSettingsFormFromState();
-        // 🔼🔼🔼
-
-        // Refresh UI
-        applyHeader();
-        renderPlayerRows();
-        layoutTrack();
-        applyBanners();
-        syncSettingsFormFromState();
-        setViewportVars();
-
-        const t1 = performance.now();
-        toast(`Config loaded (${state.players.length} players) in ${(t1 - t0).toFixed(1)} ms`);
 
     } catch (err) {
         console.error('[Import] Unexpected error:', err);
@@ -280,7 +685,8 @@ btnApplyPool.onclick = () => {
 
 // Emote list live update
 inpEmotes.oninput = () => {
-    state.settings.pool.emotes = lines(inpEmotes.value).length ? lines(inpEmotes.value) : ['🦆', '🏎️', '🟣', '🚀', '🐢'];
+    const emotes = lines(inpEmotes.value);
+    state.settings.pool.emotes = emotes.length ? emotes : getThemeFallbackEmotes().slice();
 };
 
 // Image pool upload -> object URLs (not exported)
@@ -344,7 +750,11 @@ function saveSettings() {
     state.settings.fxAll = inpFxAll.value;
     state.settings.leadPhases = clamp(num(inpLeadPhases.value, 3), 1, 10);
     state.settings.pool.mode = inpPoolMode.value;
-    state.settings.pool.emotes = lines(inpEmotes.value).length ? lines(inpEmotes.value) : ['🦆', '🏎️', '🟣', '🚀', '🐢'];
+    const emoteLines = lines(inpEmotes.value);
+    state.settings.pool.emotes = emoteLines.length ? emoteLines : getThemeFallbackEmotes().slice();
+    if (inpTheme) {
+        applyTheme(inpTheme.value, { persist: true, allowAvatarReset: false });
+    }
     applyHeader();
     layoutTrack();
     applyBanners();
@@ -482,6 +892,7 @@ function renderPlayerRows() {
             if (f) {
                 revoke(p.imgUrl);
                 p.imgUrl = URL.createObjectURL(f);
+                p.avatarEmoji = '';
                 thumb.src = p.imgUrl;
             }
         };
@@ -525,6 +936,7 @@ function layoutTrack() {
         const lane = document.createElement('div');
         lane.className = 'lane';
         lane.dataset.pid = p.id;
+        applyLaneThemeStyles(lane);
 
         // Let labels render outside the lane box and add headroom
         lane.style.overflow = 'visible';
@@ -557,18 +969,28 @@ function layoutTrack() {
 
 // Transparent emoji rendered to canvas → dataURL
 function placeholderFor(motion) {
-    const emoji = motion === 'roll' ? '🟣' : motion === 'floaty' ? '🦆' : '🏎️';
-    const c = document.createElement('canvas');
-    const s = 128;
-    c.width = s;
-    c.height = s;
-    const ctx = c.getContext('2d');
-    // transparent canvas (no fill)
-    ctx.font = '96px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, s / 2, s / 2);
-    return c.toDataURL();
+    const placeholders = state.theme?.racers?.placeholders || {};
+    const defaults = { roll: '🟣', floaty: '🦆', wheelie: '🏎️' };
+    const emoji = placeholders[motion] || placeholders.default || defaults[motion] || '🟣';
+    return emojiToDataURL(emoji);
+}
+
+function applyLaneThemeStyles(lane) {
+    if (!lane) return;
+    const laneTheme = state.theme?.lane || {};
+    const map = {
+        '--lane-bg': laneTheme.background,
+        '--lane-border': laneTheme.border,
+        '--lane-stripe-primary': laneTheme.stripePrimary,
+        '--lane-stripe-secondary': laneTheme.stripeSecondary,
+        '--lane-stripe-width': laneTheme.stripeWidth,
+        '--lane-stripe-gap': laneTheme.stripeGap,
+        '--lane-stripe-row': laneTheme.stripeRow
+    };
+    for (const [prop, value] of Object.entries(map)) {
+        if (value !== undefined && value !== null && value !== '') lane.style.setProperty(prop, value);
+        else lane.style.removeProperty(prop);
+    }
 }
 
 // ===== Race engine =====
@@ -578,6 +1000,7 @@ function startRace() {
     if (state.players.length < 2) { alert('Add at least 2 players.'); return; }
 
     applyHeader(); layoutTrack(); applyBanners(); setViewportVars();
+    emitEvent('race:starting', { settings: snapshotSettings(), players: snapshotPlayers(), timestamp: performance.now() });
 
     const lanes = [...track.querySelectorAll('.lane')];
     const trackRect = track.getBoundingClientRect();
@@ -591,16 +1014,19 @@ function startRace() {
     const baseCamSpeedWU = (100 / totalFrames); // camera forward speed in world units/frame
 
     // racers in world space
+    state.race.lastLeaderId = null;
     state.race.racers = state.players.map((p, i) => {
         const node = lanes[i].querySelector('.racer');
         node.style.left = '0px';
-        fxInit?.({ node }); // safe if you already added FX; otherwise no-op
-        return {
+        const racer = {
             id: p.id,
             name: p.name || `Player ${i + 1}`,
             motion: (state.settings.fxAll === 'off' ? p.motion : state.settings.fxAll),
-            node, laneNode: lanes[i],
-            finished: false, finishOrder: 0,
+            node,
+            laneNode: lanes[i],
+            finished: false,
+            finishOrder: 0,
+            avatarEmoji: p.avatarEmoji || '',
             // world state
             worldX: 0,
             worldV: 0,
@@ -608,6 +1034,8 @@ function startRace() {
             vSkill: rand(0.98, 1.02),
             noiseT: Math.random() * 1000,
         };
+        fxInit?.(racer);
+        return racer;
     });
 
     // camera state
@@ -644,6 +1072,7 @@ function startRace() {
     podiumBox.style.display = 'none';
     bannerOverlay.style.display = 'none';
     lanesRemoveWinner();
+    emitEvent('race:countdown', { durationMs: preRollMs, settings: snapshotSettings(), players: snapshotPlayers(), startTime: state.race.startTs });
 
     const preRollMs = 2600;
     let order = 0, launched = false;
@@ -661,6 +1090,7 @@ function startRace() {
             gate.remove(); launched = true;
             // hole-shot: tiny world burst so they jump relative to cam when it starts moving
             for (const r of state.race.racers) r.worldX += (baseCamSpeedWU * 18) * (0.8 + Math.random()*0.6);
+            emitEvent('race:begin', { settings: snapshotSettings(), players: snapshotPlayers(), timestamp: ts });
         }
 
         cam.frame++;
@@ -702,6 +1132,17 @@ function startRace() {
             vWU += burstWU;
             vWU -= brakeWU;
 
+            if (burstWU > 0) {
+                const intensity = clamp01(burstMagWU ? burstWU / burstMagWU : burstWU);
+                fxShow?.(r, 'boost', intensity);
+            } else if (brakeWU > 0) {
+                const intensity = clamp01(brakeMagWU ? brakeWU / brakeMagWU : brakeWU);
+                fxShow?.(r, 'brake', intensity);
+            }
+
+            fxUpdateAssist?.(r, catchUp);
+            fxUpdateLeaderNerf?.(r, leaderNerf);
+
             // endgame pack tighten to dramatize finish
             const distLeftWU = Math.max(0, 100 - r.worldX);
             const tightenK = (distLeftWU < 25) ? (endPackTighten * (1 - distLeftWU/25)) : 0;
@@ -736,7 +1177,12 @@ function startRace() {
         }
         if (finishedThisFrame.length) {
             finishedThisFrame.sort((a,b)=>a.worldX-b.worldX);
-            for (const r of finishedThisFrame) if (!r.finished) { r.finished = true; r.finishOrder = ++order; }
+            for (const r of finishedThisFrame) if (!r.finished) {
+                r.finished = true;
+                r.finishOrder = ++order;
+                fxUpdateAssist?.(r, 0);
+                fxUpdateLeaderNerf?.(r, 0);
+            }
         }
 
         // HUD + leader badge
@@ -744,6 +1190,14 @@ function startRace() {
         const timeLeftSec = Math.max(0, (totalFrames - cam.frame) / FPS);
         updateHUD({ timeLeftSec, leader: leader?.name || '—', chaos: state.settings.chaos, rubber: state.settings.rubber, gapPx: Math.round((leaderX - tailX) * pxPerUnit) });
         moveLeaderBadge(leader);
+        if (leader?.id && leader.id !== state.race.lastLeaderId) {
+            emitEvent('race:lead-change', {
+                leader: { id: leader.id, name: leader.name },
+                previousLeaderId: state.race.lastLeaderId,
+                frame: cam.frame
+            });
+            state.race.lastLeaderId = leader.id;
+        }
 
         // stop criteria: winner + top3 or time overtime
         const haveTop3 = state.race.racers.filter(r => r.finished).length >= Math.min(3, state.race.racers.length);
@@ -792,14 +1246,15 @@ function showWinnerAndPodium(winner, finishX) {
         bannerOverlay.style.display = 'grid';
         confettiBurst();
 
-        // Podium: 1st = winner by fractional cross; 2nd/3rd by distance
-        const rs = state.race.racers.slice().sort((a, b) => b.x - a.x);
-        const podium = [winner.name];
-        for (const r of rs) {
-            if (r.id !== winner.id && podium.length < 3) podium.push(r.name);
-            if (podium.length === 3) break;
-        }
-        podiumBox.innerHTML = `<div>🥇 ${podium[0] || ''}</div><div>🥈 ${podium[1] || ''}</div><div>🥉 ${podium[2] || ''}</div>`;
+        // Podium: order by finishOrder then remaining distance
+        const finished = state.race.racers.slice().sort((a, b) => {
+            const fa = a.finishOrder || Infinity;
+            const fb = b.finishOrder || Infinity;
+            if (fa !== fb) return fa - fb;
+            return b.worldX - a.worldX;
+        });
+        const podiumNames = finished.slice(0, 3).map(r => r.name);
+        podiumBox.innerHTML = `<div>🥇 ${podiumNames[0] || ''}</div><div>🥈 ${podiumNames[1] || ''}</div><div>🥉 ${podiumNames[2] || ''}</div>`;
         podiumBox.style.display = 'block';
 
         // Hide HUD at the end for cleaner winner moment
@@ -807,6 +1262,19 @@ function showWinnerAndPodium(winner, finishX) {
         if (hud) hud.style.display = 'none';
         const crown = document.getElementById('leaderBadge');
         if (crown) crown.remove();
+
+        emitEvent('race:finish', {
+            winner: { id: winner.id, name: winner.name },
+            podium: podiumNames,
+            finishers: finished.map(r => ({
+                id: r.id,
+                name: r.name,
+                finishOrder: r.finishOrder || Infinity,
+                worldX: r.worldX,
+                motion: r.motion
+            })),
+            durationMs: performance.now() - state.race.startTs
+        });
     } catch (e) {
         console.error(e);
     }
@@ -822,6 +1290,7 @@ function resetRace() {
         cancelAnimationFrame(state.race.rafId);
         state.race.running = false;
     }
+    state.race.lastLeaderId = null;
     lanesRemoveWinner();
     bannerOverlay.style.display = 'none';
     podiumBox.style.display = 'none';
@@ -831,28 +1300,22 @@ function resetRace() {
 
     renderPlayerRows();
     layoutTrack();
+    emitEvent('race:reset', { settings: snapshotSettings(), players: snapshotPlayers(), timestamp: performance.now() });
 }
 
 function randomAssignFromPool(force = false) {
     const mode = state.settings.pool.mode;
+    const fallbackEmotes = getThemeFallbackEmotes();
     for (const p of state.players) {
-        if (force || !p.imgUrl) {
-            if (mode === 'images' && state.settings.pool.images.length) {
-                p.imgUrl = pick(state.settings.pool.images);
-            } else {
-                const e = pick(state.settings.pool.emotes.length ? state.settings.pool.emotes : ['🦆', '🏎️', '🟣', '🚀', '🐢']);
-                // render transparent emoji
-                const c = document.createElement('canvas');
-                const s = 128;
-                c.width = s;
-                c.height = s;
-                const ctx = c.getContext('2d');
-                ctx.font = '96px serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(e, s / 2, s / 2);
-                p.imgUrl = c.toDataURL();
-            }
+        if (!force && p.imgUrl) continue;
+        if (mode === 'images' && state.settings.pool.images.length) {
+            p.imgUrl = pick(state.settings.pool.images);
+            p.avatarEmoji = '';
+        } else {
+            const pool = state.settings.pool.emotes.length ? state.settings.pool.emotes : fallbackEmotes;
+            const emoji = pick(pool);
+            p.imgUrl = emojiToDataURL(emoji);
+            p.avatarEmoji = emoji;
         }
     }
 }
@@ -863,6 +1326,24 @@ function rand(a, b) {
 
 function pick(arr) {
     return arr[(Math.random() * arr.length) | 0];
+}
+
+function getThemeFallbackEmotes(theme = state.theme) {
+    const list = theme?.racers?.emotes;
+    return Array.isArray(list) && list.length ? list : DEFAULT_EMOTES;
+}
+
+function emojiToDataURL(emoji, size = 128, fontSize = 96) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.font = `${fontSize}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, size / 2, size / 2);
+    return canvas.toDataURL();
 }
 
 // ===== Confetti =====
@@ -921,6 +1402,30 @@ function styleNameplate(el) {
     el.style.pointerEvents = 'none';
 }
 
+function populateThemeSelect() {
+    if (!inpTheme) return;
+    inpTheme.innerHTML = '';
+    for (const [key, theme] of Object.entries(THEME_PRESETS)) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = theme.label || key;
+        inpTheme.appendChild(opt);
+    }
+}
+
+function ensureThemeOption(value, label) {
+    if (!inpTheme || !value) return;
+    const options = Array.from(inpTheme.options);
+    let opt = options.find(o => o.value === value);
+    if (!opt) {
+        opt = document.createElement('option');
+        opt.value = value;
+        opt.dataset.dynamic = 'true';
+        inpTheme.appendChild(opt);
+    }
+    if (label) opt.textContent = label;
+}
+
 function syncSettingsFormFromState() {
     // settings → inputs
     inpTitle.value = state.settings.title;
@@ -934,7 +1439,12 @@ function syncSettingsFormFromState() {
     inpTopH.value = state.settings.bannerTopH;
     inpBotH.value = state.settings.bannerBotH;
     inpPoolMode.value = state.settings.pool.mode;
-    inpEmotes.value = (state.settings.pool.emotes || []).join('\n');
+    const emotes = state.settings.pool.emotes && state.settings.pool.emotes.length ? state.settings.pool.emotes : getThemeFallbackEmotes();
+    inpEmotes.value = emotes.join('\n');
+    if (inpTheme) {
+        ensureThemeOption(state.settings.theme, state.theme?.label || state.settings.theme);
+        inpTheme.value = state.settings.theme;
+    }
 
     // convenience: keep the names textarea in sync too
     if (inpNames) inpNames.value = state.players.map(p => p.name).join('\n');
@@ -1167,8 +1677,59 @@ function updateParallax(lanes, camX_WU, pxPerUnit){
     });
 }
 
+function createEventHub(){
+    const listeners = new Map();
+
+    function on(type, handler){
+        if (!type || typeof handler !== 'function') return () => {};
+        const set = listeners.get(type) || new Set();
+        set.add(handler);
+        listeners.set(type, set);
+        return () => off(type, handler);
+    }
+
+    function once(type, handler){
+        if (typeof handler !== 'function') return () => {};
+        const wrapper = (detail) => {
+            off(type, wrapper);
+            handler(detail);
+        };
+        return on(type, wrapper);
+    }
+
+    function off(type, handler){
+        if (!type) {
+            listeners.clear();
+            return;
+        }
+        const set = listeners.get(type);
+        if (!set) return;
+        if (handler) {
+            set.delete(handler);
+        } else {
+            set.clear();
+        }
+    }
+
+    function emit(type, detail){
+        const set = listeners.get(type);
+        if (!set || !set.size) return;
+        for (const fn of [...set]) {
+            try {
+                fn(detail);
+            } catch (err) {
+                console.error('[Racer] Event listener error', err);
+            }
+        }
+    }
+
+    return { on, once, off, emit };
+}
+
 // ===== Init =====
 function init() {
+    populateThemeSelect();
+    applyTheme(state.settings.theme, { persist: true, allowAvatarReset: true });
     applyHeader();
     applyTuningLabels();
     applyBanners();
@@ -1176,6 +1737,8 @@ function init() {
     layoutTrack();
     resetRace();           // your existing first-assign
     setViewportVars();     // <-- compute stage height once everything is in the DOM
+    syncSettingsFormFromState();
+    emitEvent('app:ready', { settings: snapshotSettings(), players: snapshotPlayers() });
 }
 
 // keep finish line position and layout on resize
