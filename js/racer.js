@@ -1072,9 +1072,9 @@ function startRace() {
     podiumBox.style.display = 'none';
     bannerOverlay.style.display = 'none';
     lanesRemoveWinner();
+    const preRollMs = 2600;
     emitEvent('race:countdown', { durationMs: preRollMs, settings: snapshotSettings(), players: snapshotPlayers(), startTime: state.race.startTs });
 
-    const preRollMs = 2600;
     let order = 0, launched = false;
 
     function tick(ts) {

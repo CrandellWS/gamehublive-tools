@@ -1,8 +1,3 @@
-
-# Notes:  SMOKE BREAK
-
-# UPLOADING FOR YOU 
-
 # 🎮 GameHubLive Tools
 
 A collection of lightweight, HTML+JS-based tools designed for streamers and live event hosts. These tools support OBS integration, tournament bracket management, and animated overlay generation — all offline-compatible and built with simplicity in mind.
